@@ -122,7 +122,7 @@ export class AIEvaluationService {
     ).join('\n') || 'No specific skills defined'
 
     const questionsList = role.questions?.map(q => 
-      `${q.question_text} (Category: ${q.category || 'General'}) - Weight: ${q.weight}`
+      `${q.question_text} (Category: ${q.question_category || 'General'}) - Weight: ${q.weight}`
     ).join('\n') || 'No specific questions defined'
 
     return `You are an expert HR recruiter evaluating a candidate's resume against a specific job role. Provide a comprehensive, objective evaluation.

@@ -54,7 +54,7 @@ export function AnalyticsDashboard() {
       }
       
       filteredEvaluations = filteredEvaluations.filter(
-        evaluation => new Date(evaluation.created_at || '') >= cutoffDate
+        evaluation => new Date() >= cutoffDate
       )
     }
 

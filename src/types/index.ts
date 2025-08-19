@@ -40,8 +40,8 @@ export type RoleWithDetails = Role & {
 }
 
 export type EvaluationResultWithDetails = EvaluationResult & {
-  file: FileUpload
-  role: Role
+  file: FileUpload | null
+  role: Role | null
 }
 
 export type UploadSessionWithFiles = UploadSession & {
