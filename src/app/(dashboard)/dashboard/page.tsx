@@ -156,7 +156,7 @@ export default function DashboardPage() {
                   <div key={evaluation.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex-1">
                       <div className="font-medium text-sm">
-                        {evaluation.file?.filename || 'Resume'}
+                        {'Resume'}
                       </div>
                       <div className="text-xs text-gray-500">
                         {evaluation.role?.title || 'Unknown Role'}

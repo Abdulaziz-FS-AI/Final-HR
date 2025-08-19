@@ -13,9 +13,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: false,
         error: 'No authentication session found',
-        message: 'Please log in first at http://localhost:3000/auth/login',
+        message: 'Please log in first at /auth/login',
         instructions: [
-          '1. Go to http://localhost:3000/auth/login',
+          '1. Go to /auth/login',
           '2. Sign in with Google or email',
           '3. After successful login, run this test again',
           '4. Your browser cookies will then be available to the server'
