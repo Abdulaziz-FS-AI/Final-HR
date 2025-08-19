@@ -34,7 +34,7 @@ export function AnalyticsDashboard() {
     let filteredEvaluations = evaluations
 
     if (selectedRole !== 'all') {
-      filteredEvaluations = evaluations.filter(evaluation => evaluation.role_id === selectedRole)
+      filteredEvaluations = evaluations.filter(evaluation => evaluation.role?.id === selectedRole)
     }
 
     if (timeframe !== 'all') {
