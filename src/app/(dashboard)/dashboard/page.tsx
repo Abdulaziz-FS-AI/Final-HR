@@ -167,7 +167,7 @@ export default function DashboardPage() {
                         {evaluation.overall_score}%
                       </div>
                       <div className="text-xs text-gray-500">
-                        {new Date(evaluation.created_at || '').toLocaleDateString()}
+                        {new Date().toLocaleDateString()}
                       </div>
                     </div>
                   </div>
