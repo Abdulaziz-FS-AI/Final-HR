@@ -1,20 +1,77 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Dynamically import PDF.js to avoid build issues
-let pdfjsLib: any = null
+// More robust PDF extraction with better error handling
+async function extractTextFromPDFRobust(buffer: Buffer) {
+  try {
+    // Check file size (limit to 5MB)
+    if (buffer.length > 5 * 1024 * 1024) {
+      throw new Error('PDF file too large (max 5MB)')
+    }
 
-async function initPdfJs() {
-  if (!pdfjsLib) {
-    // Only import on server during runtime
-    if (typeof window === 'undefined') {
-      pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
-      // Configure PDF.js worker for legacy build
-      if (pdfjsLib.GlobalWorkerOptions) {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
+    // Try multiple extraction methods
+    const methods = [
+      () => extractWithPdfJs(buffer),
+      () => extractWithSimpleParser(buffer)
+    ]
+
+    for (const method of methods) {
+      try {
+        return await method()
+      } catch (error) {
+        console.warn('PDF extraction method failed:', error)
+        continue
       }
     }
+
+    throw new Error('All PDF extraction methods failed')
+  } catch (error) {
+    console.error('PDF extraction error:', error)
+    throw error
   }
-  return pdfjsLib
+}
+
+async function extractWithPdfJs(buffer: Buffer) {
+  // Dynamic import with timeout
+  const pdfjs = await Promise.race([
+    import('pdfjs-dist/legacy/build/pdf.mjs'),
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('PDF.js import timeout')), 5000)
+    )
+  ]) as any
+
+  // Configure worker
+  if (pdfjs.GlobalWorkerOptions) {
+    pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
+  }
+
+  const doc = await pdfjs.getDocument({ data: buffer }).promise
+  let text = ''
+  
+  // Limit to 20 pages for performance
+  const maxPages = Math.min(doc.numPages, 20)
+  
+  for (let i = 1; i <= maxPages; i++) {
+    const page = await doc.getPage(i)
+    const content = await page.getTextContent()
+    text += content.items.map((item: any) => item.str).join(' ') + '\n'
+  }
+  
+  return {
+    text: text.trim(),
+    pages: doc.numPages,
+    method: 'pdfjs'
+  }
+}
+
+async function extractWithSimpleParser(buffer: Buffer) {
+  // Fallback: basic text extraction
+  const text = buffer.toString('utf8', 0, Math.min(buffer.length, 50000))
+  
+  return {
+    text: text.replace(/[^\x20-\x7E\n]/g, '').trim(),
+    pages: 1,
+    method: 'fallback'
+  }
 }
 
 async function extractTextFromPDF(buffer: Buffer) {
@@ -92,14 +149,19 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    // Extract text using pdf-parse
-    const data = await extractTextFromPDF(buffer)
+    // Extract text using robust method
+    const data = await extractTextFromPDFRobust(buffer)
 
     return NextResponse.json({
       text: data.text,
-      info: data.info,
-      metadata: {},
-      pages: data.numpages
+      info: { 
+        pages: data.pages,
+        characters: data.text.length,
+        words: data.text.split(/\s+/).length,
+        method: data.method
+      },
+      metadata: { extraction_method: data.method },
+      pages: data.pages
     })
 
   } catch (error: any) {

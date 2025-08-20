@@ -43,3 +43,4 @@ ofessional developer, question decisions
 - Follow security best practices
 - Maintain consistency with existing patterns
 - Test thoroughly before marking tasks complete
+- dont push to git till speciifcaly told to do so 

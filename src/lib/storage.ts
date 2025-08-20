@@ -104,10 +104,10 @@ export class StorageService {
       return { valid: false, error: 'Only PDF files are allowed' }
     }
 
-    // Check file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024 // 10MB
+    // Check file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024 // 5MB
     if (file.size > maxSize) {
-      return { valid: false, error: 'File size must be less than 10MB' }
+      return { valid: false, error: 'File size must be less than 5MB' }
     }
 
     // Check file name

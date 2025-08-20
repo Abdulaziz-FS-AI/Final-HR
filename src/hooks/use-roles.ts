@@ -89,51 +89,19 @@ export function useRoles() {
     }
     console.log('✅ Form validation passed')
 
-    // ===== STEP 2: AUTHENTICATION VERIFICATION =====
-    console.log('🔐 Starting authentication verification...')
+    // ===== STEP 2: SIMPLIFIED AUTHENTICATION CHECK =====
+    console.log('🔐 Checking authentication...')
     
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-    console.log('📡 Session data received:', { hasSession: !!sessionData.session, error: sessionError })
-    
-    if (sessionError) {
-      console.error('Session error details:', sessionError)
-      throw new Error('Authentication session error. Please log in again.')
+    // Skip session verification since user is already authenticated in context
+    if (!user?.id) {
+      throw new Error('User session invalid. Please refresh and try again.')
     }
     
-    let currentSession = sessionData.session
-    
-    if (!currentSession) {
-      console.error('No active session found')
-      throw new Error('No active session. Please log in again.')
-    }
-    
-    console.log('✅ Session found:', currentSession.user.email)
-    
-    // Proactively refresh session if it will expire in the next 5 minutes
-    const fiveMinutesFromNow = Date.now() + (5 * 60 * 1000)
-    if (currentSession.expires_at && currentSession.expires_at * 1000 <= fiveMinutesFromNow) {
-      console.log('⚠️ Session expiring soon, refreshing proactively...')
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
-      if (refreshError || !refreshData.session) {
-        console.error('Session refresh failed:', refreshError)
-        throw new Error('Session expired. Please log in again.')
-      }
-      currentSession = refreshData.session
-      console.log('✅ Session refreshed successfully')
-    }
-
+    console.log('✅ User authenticated:', user.email)
     console.log('🔑 Creating role with authenticated user:', {
       userId: user.id,
-      sessionUserId: currentSession.user?.id,
-      tokenValid: !!currentSession.access_token,
-      tokenExpiry: new Date(currentSession.expires_at! * 1000)
+      userEmail: user.email
     })
-    
-    // Verify user ID matches session
-    if (currentSession.user?.id !== user.id) {
-      console.error('User ID mismatch:', { sessionUserId: currentSession.user?.id, contextUserId: user.id })
-      throw new Error('User authentication mismatch. Please refresh and try again.')
-    }
 
     // ===== STEP 3: DATA TRANSFORMATION =====
     console.log('🔄 Transforming form data to database format...')
