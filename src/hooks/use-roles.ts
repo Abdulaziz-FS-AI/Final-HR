@@ -183,7 +183,7 @@ export function useRoles() {
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => {
               reject(new Error('RPC call timed out - this may be due to browser blocking. Please try disabling tracking protection for this site.'))
-            }, 15000) // 15 second timeout
+            }, 8000) // 8 second timeout
           })
           
           let rpcResult
