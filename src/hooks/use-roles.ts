@@ -159,12 +159,36 @@ export function useRoles() {
       const result = await withDatabaseRetry(
         async () => {
           console.log('🔄 Attempting RPC call...')
+          console.log('📦 Transaction data being sent:', JSON.stringify(transactionData, null, 2))
+          
           const { data, error } = await supabase.rpc('create_role_with_details', transactionData)
-          console.log('📡 RPC response:', { data, error })
+          
+          console.log('📡 RPC response:', { 
+            data, 
+            error, 
+            hasData: !!data,
+            dataType: typeof data,
+            errorCode: error?.code,
+            errorMessage: error?.message,
+            errorDetails: error?.details,
+            errorHint: error?.hint
+          })
+          
           if (error) {
-            console.error('❌ RPC error details:', error)
-            throw error
+            console.error('❌ RPC error details:', {
+              code: error.code,
+              message: error.message,
+              details: error.details,
+              hint: error.hint,
+              fullError: error
+            })
+            throw new Error(`Database error: ${error.message} (Code: ${error.code})`)
           }
+          
+          if (!data) {
+            throw new Error('No data returned from database function')
+          }
+          
           return data
         },
         'role creation'
@@ -205,7 +229,13 @@ export function useRoles() {
       return completeRole || { id: createdRoleId! }
 
     } catch (error: any) {
-      console.error('❌ Role creation failed:', error)
+      console.error('❌ Role creation failed:', {
+        errorMessage: error?.message,
+        errorStack: error?.stack,
+        errorName: error?.name,
+        errorCode: error?.code,
+        fullError: error
+      })
       
       // Transaction automatically handles rollback, no manual cleanup needed
       
