@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/auth-context'
 import { useRoles } from '@/hooks/use-roles'
 import { useEvaluations } from '@/hooks/use-evaluations'
 import { PDFExtractionService } from '@/lib/pdf-extraction'
-import { useErrorToast, useSuccessToast, useWarningToast } from '@/components/ui/toast'
+import { useErrorToast, useSuccessToast } from '@/components/ui/toast'
 import { getUserFriendlyMessage } from '@/lib/error-handling'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { supabase } from "@/lib/supabase"
@@ -35,11 +35,10 @@ interface UploadFile {
 export function FileUploadForm() {
   const { user } = useAuth()
   const { roles } = useRoles()
-  const { triggerBatchEvaluation, processQueue } = useEvaluations()
+  const { triggerBatchEvaluation } = useEvaluations()
   const router = useRouter()
   const showError = useErrorToast()
   const showSuccess = useSuccessToast()
-  const showWarning = useWarningToast()
   const [files, setFiles] = useState<UploadFile[]>([])
   const [selectedRole, setSelectedRole] = useState<string>('')
   const [sessionId] = useState(() => `session-${Date.now()}-${Math.random().toString(36).substring(2)}`)
@@ -147,7 +146,6 @@ export function FileUploadForm() {
 
     try {
       // Get role details for snapshot
-      console.log('📋 Fetching role details for session snapshot...')
       const { data: roleData, error: roleError } = await supabase
         .from('roles')
         .select(`
@@ -161,24 +159,48 @@ export function FileUploadForm() {
         .single()
 
       if (roleError || !roleData) {
-        console.error('❌ Failed to fetch role details:', roleError)
         throw new Error('Failed to fetch role details')
       }
 
-      console.log('✅ Role details fetched successfully')
+      // Create optimized role snapshot (remove circular references and limit size)
+      const roleSnapshot = {
+        id: roleData.id,
+        title: roleData.title,
+        description: roleData.description,
+        responsibilities: roleData.responsibilities,
+        bonus_config: roleData.bonus_config,
+        penalty_config: roleData.penalty_config,
+        skills: roleData.skills?.map(s => ({
+          skill_name: s.skill_name,
+          weight: s.weight,
+          is_required: s.is_required,
+          skill_category: s.skill_category
+        })) || [],
+        questions: roleData.questions?.map(q => ({
+          question_text: q.question_text,
+          weight: q.weight,
+          question_category: q.question_category
+        })) || [],
+        education_requirements: roleData.education_requirements?.map(e => ({
+          requirement: e.requirement,
+          is_required: e.is_required
+        })) || [],
+        experience_requirements: roleData.experience_requirements?.map(e => ({
+          requirement: e.requirement,
+          minimum_years: e.minimum_years,
+          is_required: e.is_required
+        })) || []
+      }
 
       // Create evaluation session for this upload
-      console.log('📝 Creating evaluation session...')
       const sessionData = {
         role_id: selectedRole,
         user_id: user!.id,
         total_resumes: pendingFiles.length,
         session_name: `Upload ${new Date().toLocaleDateString()}`,
-        status: 'active',
-        role_snapshot: roleData
+        status: 'active' as const,
+        role_snapshot: roleSnapshot
       }
-      
-      console.log('🔍 Session data:', JSON.stringify(sessionData, null, 2))
       
       const { data: session, error: sessionError } = await supabase
         .from('evaluation_sessions')
@@ -187,22 +209,13 @@ export function FileUploadForm() {
         .single()
 
       if (sessionError) {
-        console.error('❌ Failed to create evaluation session:', {
-          error: sessionError,
-          code: sessionError.code,
-          message: sessionError.message,
-          details: sessionError.details,
-          hint: sessionError.hint,
-          sessionData
-        })
+        console.error('Failed to create evaluation session:', sessionError)
         showError(
           'Failed to Create Evaluation Session',
-          `Error: ${sessionError.message} (Code: ${sessionError.code})`
+          `Error: ${sessionError.message}`
         )
         return
       }
-
-      console.log('✅ Evaluation session created successfully:', session.id)
 
       // Update session ID for all files
       const updatedSessionId = session.id
@@ -240,8 +253,6 @@ export function FileUploadForm() {
       
       // Save completed session ID for results navigation
       setCompletedSessionId(sessionId)
-      
-      console.log('Batch evaluation completed')
     } catch (error) {
       console.error('Evaluation failed:', error)
       alert('AI evaluation failed, but files were processed successfully')

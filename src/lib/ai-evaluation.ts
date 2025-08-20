@@ -501,6 +501,28 @@ Respond with ONLY the JSON object, no additional text.`
       return existingSession.id
     }
 
+    // Get role details for snapshot
+    const role = await this.getRoleDetails(roleId)
+    if (!role) {
+      throw new Error('Role not found for session creation')
+    }
+
+    // Create minimal role snapshot
+    const roleSnapshot = {
+      id: role.id,
+      title: role.title,
+      description: role.description,
+      skills: role.skills?.map(s => ({
+        skill_name: s.skill_name,
+        weight: s.weight,
+        is_required: s.is_required
+      })) || [],
+      questions: role.questions?.map(q => ({
+        question_text: q.question_text,
+        weight: q.weight
+      })) || []
+    }
+
     // Create new session
     const { data: newSession, error } = await supabase
       .from('evaluation_sessions')
@@ -509,7 +531,8 @@ Respond with ONLY the JSON object, no additional text.`
         user_id: userId,
         session_name: `Evaluation ${new Date().toLocaleDateString()}`,
         status: 'active',
-        total_files: 0
+        total_resumes: 0,
+        role_snapshot: roleSnapshot
       })
       .select('id')
       .single()
