@@ -475,7 +475,7 @@ Respond with ONLY the JSON object, no additional text.`
           skills_score: evaluation.skills_score,
           questions_score: evaluation.questions_score,
           ai_confidence: Math.min(100, Math.max(0, evaluation.ai_confidence)), // Ensure 0-100 range
-          ai_model_used: 'gpt-oss',
+          ai_model_used: 'openai/gpt-oss-120b',
           status: evaluation.overall_score >= 60 ? 'QUALIFIED' : 'REJECTED', // Use uppercase
           match_level: evaluation.overall_score >= 90 ? 'PERFECT' : 
                       evaluation.overall_score >= 80 ? 'STRONG' : 
