@@ -97,6 +97,8 @@ export function useRoles() {
       throw new Error('User session invalid. Please refresh and try again.')
     }
 
+    console.log('🔐 Current authenticated user:', user.id)
+
     // Transform data
     
     // Declare transformedData in outer scope
@@ -105,6 +107,7 @@ export function useRoles() {
     
     try {
       transformedData = transformRoleFormData(roleData, user.id)
+      console.log('🔄 Transformed user_id in role data:', transformedData.roleData.user_id)
       console.log('✅ Data transformation completed')
       
       summary = generateRoleCreationSummary(roleData)
@@ -137,17 +140,47 @@ export function useRoles() {
       // ===== STEP 4: CREATE ROLE USING DIRECT TABLE INSERTS =====
       console.log('🚀 Creating role with direct inserts...')
       
+      // Verify session before insert
+      const { data: session } = await supabase.auth.getSession()
+      console.log('🔐 Session check before insert:', {
+        hasSession: !!session.session,
+        sessionUserId: session.session?.user?.id,
+        transformedUserId: transformedData.roleData.user_id,
+        userIdsMatch: session.session?.user?.id === transformedData.roleData.user_id
+      })
+      
       // Step 1: Insert the main role
       console.log('📝 Step 1: Creating role...')
-      const { data: roleResult, error: roleError } = await supabase
+      console.log('🔍 Role data being inserted:', JSON.stringify(transformedData.roleData, null, 2))
+      
+      // Add timeout to prevent infinite hanging
+      const roleInsertPromise = supabase
         .from('roles')
         .insert(transformedData.roleData)
         .select()
         .single()
       
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Role insert timed out after 15 seconds'))
+        }, 15000)
+      })
+      
+      const { data: roleResult, error: roleError } = await Promise.race([
+        roleInsertPromise, 
+        timeoutPromise
+      ]) as any
+      
       if (roleError) {
-        console.error('❌ Role insert failed:', roleError)
-        throw new Error(`Failed to create role: ${roleError.message}`)
+        console.error('❌ Role insert failed:', {
+          error: roleError,
+          code: roleError.code,
+          message: roleError.message,
+          details: roleError.details,
+          hint: roleError.hint,
+          data: transformedData.roleData
+        })
+        throw new Error(`Failed to create role: ${roleError.message} (Code: ${roleError.code})`)
       }
       
       createdRoleId = roleResult.id
