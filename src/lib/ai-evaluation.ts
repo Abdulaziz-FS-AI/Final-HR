@@ -100,6 +100,36 @@ export class AIEvaluationService {
   }
 
   /**
+   * Call Hyperbolic AI API
+   */
+  private async callHyperbolicAPI(prompt: string): Promise<string> {
+    try {
+      const response = await fetch('/api/ai-evaluate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt })
+      })
+
+      if (!response.ok) {
+        throw new Error(`AI API error: ${response.status} ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      
+      if (!result.success || !result.content) {
+        throw new Error('Invalid AI API response')
+      }
+
+      return result.content
+    } catch (error: any) {
+      console.error('AI API call failed:', error)
+      throw new Error(`AI evaluation failed: ${error.message}`)
+    }
+  }
+
+  /**
    * Get role details with skills and questions
    */
   private async getRoleDetails(roleId: string): Promise<RoleWithDetails | null> {
