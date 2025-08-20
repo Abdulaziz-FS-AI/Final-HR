@@ -16,8 +16,7 @@ export function useRoles() {
   const { reportError } = useErrorMonitoring()
 
   const fetchRoles = useCallback(async () => {
-    if (!user || !user.id) {
-      console.log('fetchRoles: No user or user.id available', { user })
+    if (!user?.id) {
       setLoading(false)
       return
     }
@@ -25,11 +24,6 @@ export function useRoles() {
     try {
       setLoading(true)
       setError(null)
-      
-      // Debug: Check session before making request
-      const { data: session } = await supabase.auth.getSession()
-      console.log('fetchRoles: Current session:', !!session.session)
-      console.log('fetchRoles: User ID:', user.id)
       
       const { data, error } = await supabase
         .from('roles')
@@ -44,16 +38,11 @@ export function useRoles() {
         .eq('is_active', true)
         .order('created_at', { ascending: false })
 
-      if (error) {
-        console.error('fetchRoles error:', error)
-        throw error
-      }
+      if (error) throw error
       
       setRoles(data || [])
-      console.log(`✅ Fetched ${data?.length || 0} roles`)
       
     } catch (err: any) {
-      console.error('fetchRoles failed:', err)
       setError(err.message)
       setRoles([])
     } finally {
@@ -62,14 +51,11 @@ export function useRoles() {
   }, [user])
 
   const createRole = async (roleData: RoleFormData) => {
-    console.log('🚀 Creating role...')
-    
-    // Enhanced validation
-    if (!user) throw new Error('Authentication required. Please log in.')
-    if (!user.id) throw new Error('User session invalid. Please refresh and try again.')
+    // Validation
+    if (!user?.id) throw new Error('Authentication required. Please log in.')
 
     // Import utilities
-    let validateRoleForm, transformRoleFormData, generateRoleCreationSummary, validateTransformedData, createUserSummary, generateEvaluationPrompt
+    let validateRoleForm, transformRoleFormData
     
     try {
       const validationModule = await import('@/utils/form-validation')
@@ -77,239 +63,110 @@ export function useRoles() {
       
       const transformModule = await import('@/utils/role-data-transformer')
       transformRoleFormData = transformModule.transformRoleFormData
-      generateRoleCreationSummary = transformModule.generateRoleCreationSummary
-      validateTransformedData = transformModule.validateTransformedData
-      createUserSummary = transformModule.createUserSummary
-      generateEvaluationPrompt = transformModule.generateEvaluationPrompt
     } catch (importError) {
-      console.error('Import failed:', importError)
-      throw new Error(`Module import failed: ${importError.message}`)
+      throw new Error('Failed to load required modules')
     }
 
     // Validate form
     const validation = validateRoleForm(roleData)
     if (!validation.isValid) {
-      throw new Error(`Form validation failed: ${validation.errors.join(', ')}`)
+      throw new Error(validation.errors.join(', '))
     }
-
-    // Check authentication
-    if (!user?.id) {
-      throw new Error('User session invalid. Please refresh and try again.')
-    }
-
-    console.log('🔐 Current authenticated user:', user.id)
 
     // Transform data
-    
-    // Declare transformedData in outer scope
     let transformedData: any
-    let summary: any
     
     try {
       transformedData = transformRoleFormData(roleData, user.id)
-      console.log('🔄 Transformed user_id in role data:', transformedData.roleData.user_id)
-      console.log('✅ Data transformation completed')
-      
-      summary = generateRoleCreationSummary(roleData)
-      console.log('📊 Role creation summary:', summary)
-      
-      const evaluationPrompt = generateEvaluationPrompt(
-        transformedData.roleData, 
-        transformedData.skillsData, 
-        transformedData.questionsData,
-        transformedData.educationData,
-        transformedData.experienceData
-      )
-      console.log('🎯 Evaluation prompt preview:', evaluationPrompt.substring(0, 200) + '...')
     } catch (transformError: any) {
-      console.error('❌ Data transformation failed:', transformError)
-      throw new Error(`Data transformation failed: ${transformError.message}`)
+      throw new Error('Failed to prepare role data')
     }
-    
-    // Validate transformed data
-    const transformationErrors = validateTransformedData(transformedData)
-    if (transformationErrors.length > 0) {
-      console.error('❌ Data transformation validation failed:', transformationErrors)
-      throw new Error(`Data transformation failed: ${transformationErrors.join(', ')}`)
-    }
-    console.log('✅ Data transformation validated')
 
     let createdRoleId: string | null = null
 
     try {
-      // ===== STEP 4: CREATE ROLE USING DIRECT TABLE INSERTS =====
-      console.log('🚀 Creating role with direct inserts...')
-      
-      // Verify session before insert
-      const { data: session } = await supabase.auth.getSession()
-      console.log('🔐 Session check before insert:', {
-        hasSession: !!session.session,
-        sessionUserId: session.session?.user?.id,
-        transformedUserId: transformedData.roleData.user_id,
-        userIdsMatch: session.session?.user?.id === transformedData.roleData.user_id
-      })
-      
-      // Step 1: Insert the main role
-      console.log('📝 Step 1: Creating role...')
-      console.log('🔍 Role data being inserted:', JSON.stringify(transformedData.roleData, null, 2))
-      
-      // Add timeout to prevent infinite hanging
-      const roleInsertPromise = supabase
+      // Create role with simplified error handling
+      const { data: roleResult, error: roleError } = await supabase
         .from('roles')
         .insert(transformedData.roleData)
         .select()
         .single()
       
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('Role insert timed out after 15 seconds'))
-        }, 15000)
-      })
-      
-      const { data: roleResult, error: roleError } = await Promise.race([
-        roleInsertPromise, 
-        timeoutPromise
-      ]) as any
-      
       if (roleError) {
-        console.error('❌ Role insert failed:', {
-          error: roleError,
-          code: roleError.code,
-          message: roleError.message,
-          details: roleError.details,
-          hint: roleError.hint,
-          data: transformedData.roleData
-        })
-        throw new Error(`Failed to create role: ${roleError.message} (Code: ${roleError.code})`)
+        throw new Error(`Failed to create role: ${roleError.message}`)
       }
       
       createdRoleId = roleResult.id
-      console.log('✅ Role created successfully:', createdRoleId)
       
       // Step 2: Insert skills in parallel
       const insertPromises: Promise<any>[] = []
       
-      if (transformedData.skillsData.length > 0) {
-        console.log('📝 Step 2: Adding skills...')
+      if (transformedData.skillsData?.length > 0) {
         const skillsWithRoleId = transformedData.skillsData.map(skill => ({
           ...skill,
           role_id: createdRoleId
         }))
-        
         insertPromises.push(
           supabase.from('role_skills').insert(skillsWithRoleId)
         )
       }
       
-      if (transformedData.questionsData.length > 0) {
-        console.log('📝 Step 3: Adding questions...')
+      if (transformedData.questionsData?.length > 0) {
         const questionsWithRoleId = transformedData.questionsData.map(question => ({
           ...question,
           role_id: createdRoleId
         }))
-        
         insertPromises.push(
           supabase.from('role_questions').insert(questionsWithRoleId)
         )
       }
       
-      if (transformedData.educationData.length > 0) {
-        console.log('📝 Step 4: Adding education requirements...')
+      if (transformedData.educationData?.length > 0) {
         const educationWithRoleId = transformedData.educationData.map(edu => ({
           ...edu,
           role_id: createdRoleId
         }))
-        
         insertPromises.push(
           supabase.from('role_education_requirements').insert(educationWithRoleId)
         )
       }
       
-      if (transformedData.experienceData.length > 0) {
-        console.log('📝 Step 5: Adding experience requirements...')
+      if (transformedData.experienceData?.length > 0) {
         const experienceWithRoleId = transformedData.experienceData.map(exp => ({
           ...exp,
           role_id: createdRoleId
         }))
-        
         insertPromises.push(
           supabase.from('role_experience_requirements').insert(experienceWithRoleId)
         )
       }
       
-      // Execute all inserts in parallel for better performance
+      // Execute all inserts in parallel
       if (insertPromises.length > 0) {
-        console.log(`📦 Executing ${insertPromises.length} related data inserts...`)
-        const results = await Promise.all(insertPromises)
-        
-        // Check for any errors in the parallel inserts
-        const errors = results.filter(result => result.error)
-        if (errors.length > 0) {
-          console.error('❌ Some related data inserts failed:', errors)
-          // Continue anyway - role is created, some data might be missing but not critical
-          console.log('⚠️ Role created but some related data may be incomplete')
-        } else {
-          console.log('✅ All related data inserted successfully')
-        }
+        await Promise.all(insertPromises)
       }
 
-      // ===== STEP 5: FINALIZE AND SUCCESS =====
-      console.log('🔄 Refreshing roles list...')
-      if (user && user.id) {
-        await fetchRoles()
-      }
+      // Refresh roles list
+      await fetchRoles()
       
-      // Fetch the complete role with all relations
-      const { data: completeRole } = await supabase
-        .from('roles')
-        .select(`
-          *,
-          skills:role_skills(*),
-          questions:role_questions(*),
-          education_requirements:role_education_requirements(*),
-          experience_requirements:role_experience_requirements(*)
-        `)
-        .eq('id', createdRoleId!)
-        .single()
-      
-      console.log('🎉 Role creation completed successfully!')
-      
-      return completeRole || { id: createdRoleId! }
+      // Return the created role ID
+      return { id: createdRoleId! }
 
     } catch (error: any) {
-      console.error('❌ Role creation failed:', {
-        errorMessage: error?.message,
-        errorStack: error?.stack,
-        errorName: error?.name,
-        errorCode: error?.code,
-        fullError: error
-      })
-      
-      // Report to error monitoring
-      reportError(
-        `Role creation failed: ${error?.message || 'Unknown error'}`, 
-        'high'
-      )
-      
-      // Basic cleanup if role was created but related data failed
-      if (createdRoleId && error?.message?.includes('related data')) {
-        console.log('🧹 Attempting cleanup of partially created role...')
-        try {
-          await supabase
-            .from('roles')
-            .update({ is_active: false })
-            .eq('id', createdRoleId)
-          console.log('✅ Role marked as inactive for cleanup')
-        } catch (cleanupError) {
-          console.error('❌ Cleanup failed:', cleanupError)
-          // Don't throw - original error is more important
-        }
+      // Cleanup if role was partially created
+      if (createdRoleId) {
+        await supabase
+          .from('roles')
+          .delete()
+          .eq('id', createdRoleId)
+          .catch(() => {}) // Ignore cleanup errors
       }
       
-      // Enhanced error handling
-      let friendlyError = getUserFriendlyError(error)
+      // Report error
+      reportError(error?.message || 'Role creation failed', 'high')
       
-      throw new Error(friendlyError)
+      // Throw user-friendly error
+      throw new Error(getUserFriendlyError(error))
     }
   }
 
