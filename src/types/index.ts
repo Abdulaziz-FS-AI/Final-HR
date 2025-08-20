@@ -42,11 +42,93 @@ export type RoleWithDetails = Role & {
 export type EvaluationResultWithDetails = EvaluationResult & {
   file: FileUpload | null
   role: Role | null
+  session: (EvaluationSession & {
+    role: Role | null
+  }) | null
 }
 
 export type UploadSessionWithFiles = UploadSession & {
   files: FileUpload[]
   role: Role
+}
+
+// AI Evaluation types
+export interface AIEvaluationRequest {
+  roleId: string
+  fileId: string
+  resumeText: string
+  contactInfo?: {
+    name?: string
+    email?: string
+    phone?: string
+  }
+}
+
+export interface AIEvaluationResponse {
+  candidate_name: string
+  overall_score: number
+  base_score?: number
+  skills_score: number
+  questions_score: number
+  bonus_points: number
+  penalty_points: number
+  bonus_breakdown?: {
+    education_bonus?: number
+    company_bonus?: number
+    projects_bonus?: number
+    certifications_bonus?: number
+  }
+  penalty_breakdown?: {
+    job_stability_penalty?: number
+    employment_gap_penalty?: number
+  }
+  skills_analysis: SkillAnalysis[]
+  questions_analysis: QuestionAnalysis[]
+  recommendations: string[]
+  red_flags: string[]
+  analysis_summary: string
+  ai_confidence: number
+}
+
+export interface SkillAnalysis {
+  skill_name: string
+  found: boolean
+  level: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'
+  evidence: string
+}
+
+export interface QuestionAnalysis {
+  question: string
+  answer: 'YES' | 'NO' | 'PARTIAL'
+  quality: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'
+  evidence: string
+}
+
+// Analytics types
+export interface RoleAnalytics {
+  roleId: string
+  roleTitle: string
+  totalEvaluated: number
+  averageScore: number
+  qualificationRate: number
+  skillsAnalysis: Record<string, {
+    availability: number
+    averageProficiency: number
+    isBottleneck: boolean
+  }>
+  questionsAnalysis: Record<string, {
+    positiveRate: number
+    averageQuality: number
+  }>
+  topCandidates: EvaluationResult[]
+}
+
+// Error handling types
+export interface AppError extends Error {
+  code?: string
+  statusCode?: number
+  details?: any
+  timestamp?: string
 }
 
 // Form types
