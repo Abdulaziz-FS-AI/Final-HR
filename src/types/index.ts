@@ -171,6 +171,16 @@ export interface AIEvaluationResponse {
   questions_score: number
   bonus_points: number
   penalty_points: number
+  bonus_breakdown?: {
+    education_bonus?: number
+    company_bonus?: number
+    projects_bonus?: number
+    certifications_bonus?: number
+  }
+  penalty_breakdown?: {
+    job_stability_penalty?: number
+    employment_gap_penalty?: number
+  }
   skills_analysis: {
     skill_name: string
     found: boolean

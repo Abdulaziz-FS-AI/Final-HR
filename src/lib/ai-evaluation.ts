@@ -423,21 +423,42 @@ Respond with ONLY the JSON object, no additional text.`
         .from('evaluation_results')
         .insert({
           file_id: request.fileId,
-          role_id: request.roleId,
           session_id: sessionId,
           user_id: (await supabase.auth.getUser()).data.user?.id || '',
           candidate_name: evaluation.candidate_name,
           overall_score: evaluation.overall_score,
           bonus_points: evaluation.bonus_points,
           penalty_points: evaluation.penalty_points,
-          skills_analysis: evaluation.skills_analysis as any,
-          questions_analysis: evaluation.questions_analysis as any,
-          recommendations: evaluation.recommendations as any,
-          red_flags: evaluation.red_flags as any,
-          analysis_summary: evaluation.analysis_summary,
-          ai_confidence: evaluation.ai_confidence,
-          raw_ai_output: evaluation as any,
-          status: 'completed'
+          skills_score: evaluation.skills_score,
+          questions_score: evaluation.questions_score,
+          ai_confidence: evaluation.ai_confidence / 100, // Convert to decimal
+          ai_model_used: 'openai/gpt-oss-120b',
+          status: 'QUALIFIED', // Based on score threshold
+          match_level: evaluation.overall_score >= 90 ? 'PERFECT' : 
+                      evaluation.overall_score >= 80 ? 'STRONG' : 
+                      evaluation.overall_score >= 70 ? 'GOOD' : 
+                      evaluation.overall_score >= 60 ? 'FAIR' : 'POOR',
+          table_view: {
+            candidate_name: evaluation.candidate_name,
+            overall_score: evaluation.overall_score,
+            skills_score: evaluation.skills_score,
+            questions_score: evaluation.questions_score,
+            bonus_points: evaluation.bonus_points,
+            penalty_points: evaluation.penalty_points,
+            ai_confidence: evaluation.ai_confidence,
+            recommendations_count: evaluation.recommendations?.length || 0,
+            red_flags_count: evaluation.red_flags?.length || 0
+          },
+          expanded_view: {
+            skills_analysis: evaluation.skills_analysis,
+            questions_analysis: evaluation.questions_analysis,
+            recommendations: evaluation.recommendations,
+            red_flags: evaluation.red_flags,
+            analysis_summary: evaluation.analysis_summary,
+            bonus_breakdown: evaluation.bonus_breakdown || {},
+            penalty_breakdown: evaluation.penalty_breakdown || {},
+            raw_ai_output: evaluation
+          }
         })
 
       if (error) {
