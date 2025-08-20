@@ -42,3 +42,6 @@ next-env.d.ts
 # OS
 Thumbs.db.env.local
 debug-auth.js
+
+# MCP config with secrets
+.mcp.json
