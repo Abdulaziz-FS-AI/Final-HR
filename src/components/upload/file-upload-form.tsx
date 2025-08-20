@@ -147,6 +147,7 @@ export function FileUploadForm() {
 
     try {
       // Get role details for snapshot
+      console.log('📋 Fetching role details for session snapshot...')
       const { data: roleData, error: roleError } = await supabase
         .from('roles')
         .select(`
@@ -160,28 +161,48 @@ export function FileUploadForm() {
         .single()
 
       if (roleError || !roleData) {
+        console.error('❌ Failed to fetch role details:', roleError)
         throw new Error('Failed to fetch role details')
       }
 
+      console.log('✅ Role details fetched successfully')
+
       // Create evaluation session for this upload
+      console.log('📝 Creating evaluation session...')
+      const sessionData = {
+        role_id: selectedRole,
+        user_id: user!.id,
+        total_resumes: pendingFiles.length,
+        session_name: `Upload ${new Date().toLocaleDateString()}`,
+        status: 'active',
+        role_snapshot: roleData
+      }
+      
+      console.log('🔍 Session data:', JSON.stringify(sessionData, null, 2))
+      
       const { data: session, error: sessionError } = await supabase
         .from('evaluation_sessions')
-        .insert({
-          role_id: selectedRole,
-          user_id: user!.id,
-          total_resumes: pendingFiles.length,
-          session_name: `Upload ${new Date().toLocaleDateString()}`,
-          status: 'active',
-          role_snapshot: roleData
-        })
+        .insert(sessionData)
         .select()
         .single()
 
       if (sessionError) {
-        console.error('Failed to create evaluation session:', sessionError)
-        alert('Failed to create evaluation session')
+        console.error('❌ Failed to create evaluation session:', {
+          error: sessionError,
+          code: sessionError.code,
+          message: sessionError.message,
+          details: sessionError.details,
+          hint: sessionError.hint,
+          sessionData
+        })
+        showError(
+          'Failed to Create Evaluation Session',
+          `Error: ${sessionError.message} (Code: ${sessionError.code})`
+        )
         return
       }
+
+      console.log('✅ Evaluation session created successfully:', session.id)
 
       // Update session ID for all files
       const updatedSessionId = session.id
