@@ -62,6 +62,9 @@ export function useRoles() {
   }, [user])
 
   const createRole = async (roleData: RoleFormData) => {
+    console.log('🚀 BRAVE DEBUG: createRole function called')
+    console.log('🚀 BRAVE DEBUG: Browser user agent:', navigator.userAgent)
+    console.log('🚀 BRAVE DEBUG: Role data received:', roleData)
     console.log('🚀 Starting createRole function...')
     
     // Enhanced validation
@@ -70,16 +73,26 @@ export function useRoles() {
 
     // Import validation and transformation utilities at the top
     console.log('📦 Importing validation utilities...')
-    const { validateRoleForm } = await import('@/utils/form-validation')
-    console.log('📦 Importing transformation utilities...')
-    const { 
-      transformRoleFormData, 
-      generateRoleCreationSummary, 
-      validateTransformedData,
-      createUserSummary,
-      generateEvaluationPrompt
-    } = await import('@/utils/role-data-transformer')
-    console.log('✅ All imports successful')
+    
+    let validateRoleForm, transformRoleFormData, generateRoleCreationSummary, validateTransformedData, createUserSummary, generateEvaluationPrompt
+    
+    try {
+      const validationModule = await import('@/utils/form-validation')
+      validateRoleForm = validationModule.validateRoleForm
+      console.log('✅ Form validation imported')
+      
+      console.log('📦 Importing transformation utilities...')
+      const transformModule = await import('@/utils/role-data-transformer')
+      transformRoleFormData = transformModule.transformRoleFormData
+      generateRoleCreationSummary = transformModule.generateRoleCreationSummary
+      validateTransformedData = transformModule.validateTransformedData
+      createUserSummary = transformModule.createUserSummary
+      generateEvaluationPrompt = transformModule.generateEvaluationPrompt
+      console.log('✅ All imports successful')
+    } catch (importError) {
+      console.error('❌ BRAVE DEBUG: Import failed:', importError)
+      throw new Error(`Module import failed: ${importError.message}`)
+    }
 
     // ===== STEP 1: COMPREHENSIVE FORM VALIDATION =====
     console.log('📝 Validating form data...')
