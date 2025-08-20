@@ -146,15 +146,33 @@ export function FileUploadForm() {
     }
 
     try {
+      // Get role details for snapshot
+      const { data: roleData, error: roleError } = await supabase
+        .from('roles')
+        .select(`
+          *,
+          skills:role_skills(*),
+          questions:role_questions(*),
+          education_requirements:role_education_requirements(*),
+          experience_requirements:role_experience_requirements(*)
+        `)
+        .eq('id', selectedRole)
+        .single()
+
+      if (roleError || !roleData) {
+        throw new Error('Failed to fetch role details')
+      }
+
       // Create evaluation session for this upload
       const { data: session, error: sessionError } = await supabase
         .from('evaluation_sessions')
         .insert({
           role_id: selectedRole,
           user_id: user!.id,
-          total_files: pendingFiles.length,
+          total_resumes: pendingFiles.length,
           session_name: `Upload ${new Date().toLocaleDateString()}`,
-          status: 'active'
+          status: 'active',
+          role_snapshot: roleData
         })
         .select()
         .single()
