@@ -68,52 +68,56 @@ async function extractWithPdfJs(buffer: Buffer) {
       pdfjs.GlobalWorkerOptions.workerSrc = null
     }
 
-  const doc = await pdfjs.getDocument({ 
-    data: buffer,
-    verbosity: 0,
-    standardFontDataUrl: null,
-    cMapUrl: null,
-    cMapPacked: false
-  }).promise
-  
-  let text = ''
-  
-  // Limit to 50 pages for performance
-  const maxPages = Math.min(doc.numPages, 50)
-  
-  for (let i = 1; i <= maxPages; i++) {
-    try {
-      const page = await doc.getPage(i)
-      const content = await page.getTextContent({
-        includeMarkedContent: false,
-        disableNormalization: false
-      })
-      
-      // Extract text with better spacing
-      const pageText = content.items
-        .map((item: any) => item.str || '')
-        .join(' ')
-      
-      if (pageText.trim()) {
-        text += pageText + '\n\n'
+    const doc = await pdfjs.getDocument({ 
+      data: buffer,
+      verbosity: 0,
+      standardFontDataUrl: null,
+      cMapUrl: null,
+      cMapPacked: false
+    }).promise
+    
+    let text = ''
+    
+    // Limit to 50 pages for performance
+    const maxPages = Math.min(doc.numPages, 50)
+    
+    for (let i = 1; i <= maxPages; i++) {
+      try {
+        const page = await doc.getPage(i)
+        const content = await page.getTextContent({
+          includeMarkedContent: false,
+          disableNormalization: false
+        })
+        
+        // Extract text with better spacing
+        const pageText = content.items
+          .map((item: any) => item.str || '')
+          .join(' ')
+        
+        if (pageText.trim()) {
+          text += pageText + '\n\n'
+        }
+      } catch (pageError) {
+        console.warn(`Failed to extract page ${i}:`, pageError)
+        continue
       }
-    } catch (pageError) {
-      console.warn(`Failed to extract page ${i}:`, pageError)
-      continue
     }
-  }
-  
-  // Clean and validate text
-  const cleanedText = text
-    .replace(/\s+/g, ' ')
-    .replace(/\n\s*\n\s*\n/g, '\n\n')
-    .trim()
-  
-  return {
-    text: cleanedText,
-    pages: doc.numPages,
-    method: 'pdfjs',
-    extractedPages: maxPages
+    
+    // Clean and validate text
+    const cleanedText = text
+      .replace(/\s+/g, ' ')
+      .replace(/\n\s*\n\s*\n/g, '\n\n')
+      .trim()
+    
+    return {
+      text: cleanedText,
+      pages: doc.numPages,
+      method: 'pdfjs',
+      extractedPages: maxPages
+    }
+  } catch (error) {
+    console.error('PDF.js extraction failed:', error)
+    throw error
   }
 }
 
