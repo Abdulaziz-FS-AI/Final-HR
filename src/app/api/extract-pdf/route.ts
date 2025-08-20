@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// More robust PDF extraction with better error handling
+// Robust PDF extraction with multiple fallback methods
 async function extractTextFromPDFRobust(buffer: Buffer) {
   try {
     // Check file size (limit to 5MB)
@@ -8,22 +8,31 @@ async function extractTextFromPDFRobust(buffer: Buffer) {
       throw new Error('PDF file too large (max 5MB)')
     }
 
-    // Try multiple extraction methods
+    // Try extraction methods in order of preference
     const methods = [
       () => extractWithPdfJs(buffer),
-      () => extractWithSimpleParser(buffer)
+      () => extractWithSimpleParser(buffer),
+      () => extractWithFallback(buffer)
     ]
+
+    let lastError: Error | null = null
 
     for (const method of methods) {
       try {
-        return await method()
+        const result = await method()
+        
+        // Validate result quality
+        if (result.text && result.text.length > 50) {
+          return result
+        }
       } catch (error) {
+        lastError = error as Error
         console.warn('PDF extraction method failed:', error)
         continue
       }
     }
 
-    throw new Error('All PDF extraction methods failed')
+    throw new Error(`All PDF extraction methods failed. Last error: ${lastError?.message}`)
   } catch (error) {
     console.error('PDF extraction error:', error)
     throw error
@@ -33,96 +42,107 @@ async function extractTextFromPDFRobust(buffer: Buffer) {
 async function extractWithPdfJs(buffer: Buffer) {
   // Dynamic import with timeout
   const pdfjs = await Promise.race([
-    import('pdfjs-dist/legacy/build/pdf.mjs'),
+    import('pdfjs-dist'),
     new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('PDF.js import timeout')), 5000)
+      setTimeout(() => reject(new Error('PDF.js import timeout')), 10000)
     )
   ]) as any
 
-  // Configure worker
-  if (pdfjs.GlobalWorkerOptions) {
-    pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
+  // Configure worker path (Node.js environment doesn't need worker)
+  if (typeof window === 'undefined') {
+    // Server-side: disable worker
+    pdfjs.GlobalWorkerOptions.workerSrc = null
   }
 
-  const doc = await pdfjs.getDocument({ data: buffer }).promise
+  const doc = await pdfjs.getDocument({ 
+    data: buffer,
+    verbosity: 0,
+    standardFontDataUrl: null,
+    cMapUrl: null,
+    cMapPacked: false
+  }).promise
+  
   let text = ''
   
-  // Limit to 20 pages for performance
-  const maxPages = Math.min(doc.numPages, 20)
+  // Limit to 50 pages for performance
+  const maxPages = Math.min(doc.numPages, 50)
   
   for (let i = 1; i <= maxPages; i++) {
-    const page = await doc.getPage(i)
-    const content = await page.getTextContent()
-    text += content.items.map((item: any) => item.str).join(' ') + '\n'
+    try {
+      const page = await doc.getPage(i)
+      const content = await page.getTextContent({
+        includeMarkedContent: false,
+        disableNormalization: false
+      })
+      
+      // Extract text with better spacing
+      const pageText = content.items
+        .map((item: any) => {
+          if (item.str && typeof item.str === 'string') {
+            return item.str
+          }
+          return ''
+        })
+        .filter(str => str.length > 0)
+        .join(' ')
+      
+      if (pageText.trim()) {
+        text += pageText + '\n\n'
+      }
+    } catch (pageError) {
+      console.warn(`Failed to extract page ${i}:`, pageError)
+      continue
+    }
   }
   
+  // Clean and validate text
+  const cleanedText = text
+    .replace(/\s+/g, ' ')
+    .replace(/\n\s*\n\s*\n/g, '\n\n')
+    .trim()
+  
   return {
-    text: text.trim(),
+    text: cleanedText,
     pages: doc.numPages,
-    method: 'pdfjs'
+    method: 'pdfjs',
+    extractedPages: maxPages
   }
 }
 
 async function extractWithSimpleParser(buffer: Buffer) {
-  // Fallback: basic text extraction
-  const text = buffer.toString('utf8', 0, Math.min(buffer.length, 50000))
+  // Try to extract readable text from PDF buffer
+  const bufferStr = buffer.toString('binary')
+  const textMatches = bufferStr.match(/\(([^)]+)\)/g) || []
+  
+  let text = textMatches
+    .map(match => match.slice(1, -1))
+    .filter(str => str.length > 2 && /[a-zA-Z]/.test(str))
+    .join(' ')
+  
+  // Clean extracted text
+  text = text
+    .replace(/[^\x20-\x7E\n]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
   
   return {
-    text: text.replace(/[^\x20-\x7E\n]/g, '').trim(),
+    text,
     pages: 1,
-    method: 'fallback'
+    method: 'simple-parser'
   }
 }
 
-async function extractTextFromPDF(buffer: Buffer) {
-  try {
-    // Initialize PDF.js
-    const pdf = await initPdfJs()
-    if (!pdf) {
-      throw new Error('PDF.js not available in this environment')
-    }
-    
-    // Load the PDF document
-    const loadingTask = pdf.getDocument({
-      data: buffer,
-      verbosity: 0
-    })
-    
-    const pdfDocument = await loadingTask.promise
-    const numPages = pdfDocument.numPages
-    let fullText = ''
-    
-    // Extract text from each page
-    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-      const page = await pdfDocument.getPage(pageNum)
-      const textContent = await page.getTextContent()
-      
-      // Combine text items into readable text
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ')
-      
-      fullText += pageText + '\n'
-    }
-    
-    // Clean up the extracted text
-    const cleanedText = fullText
-      .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
-      .replace(/\n\s*\n/g, '\n')  // Remove empty lines
-      .trim()
-    
-    return {
-      text: cleanedText,
-      info: { 
-        pages: numPages,
-        characters: cleanedText.length,
-        words: cleanedText.split(/\s+/).length
-      },
-      numpages: numPages
-    }
-  } catch (error) {
-    console.error('PDF extraction error:', error)
-    throw new Error('Failed to extract text from PDF: ' + error)
+async function extractWithFallback(buffer: Buffer) {
+  // Last resort: return basic file info
+  const text = `[PDF Document - ${buffer.length} bytes] 
+Failed to extract readable text. This may be a scanned PDF or contain complex formatting.
+Please try uploading a text-based PDF or provide the content manually.`
+  
+  return {
+    text,
+    pages: 1,
+    method: 'fallback',
+    extractionFailed: true
   }
 }
 
@@ -152,16 +172,25 @@ export async function POST(request: NextRequest) {
     // Extract text using robust method
     const data = await extractTextFromPDFRobust(buffer)
 
+    const wordCount = data.text.split(/\s+/).filter(w => w.length > 0).length
+
     return NextResponse.json({
       text: data.text,
       info: { 
-        pages: data.pages,
+        pages: data.pages || 1,
         characters: data.text.length,
-        words: data.text.split(/\s+/).length,
-        method: data.method
+        words: wordCount,
+        method: data.method,
+        extractedPages: data.extractedPages || data.pages || 1,
+        extractionFailed: data.extractionFailed || false
       },
-      metadata: { extraction_method: data.method },
-      pages: data.pages
+      metadata: { 
+        extraction_method: data.method,
+        file_size: buffer.length,
+        extraction_quality: data.extractionFailed ? 'low' : wordCount > 100 ? 'high' : 'medium'
+      },
+      pages: data.pages || 1,
+      numpages: data.pages || 1
     })
 
   } catch (error: any) {

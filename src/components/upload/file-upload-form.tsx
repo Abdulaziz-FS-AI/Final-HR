@@ -8,6 +8,8 @@ import { useAuth } from '@/lib/auth-context'
 import { useRoles } from '@/hooks/use-roles'
 import { useEvaluations } from '@/hooks/use-evaluations'
 import { PDFExtractionService } from '@/lib/pdf-extraction'
+import { useErrorToast, useSuccessToast, useWarningToast } from '@/components/ui/toast'
+import { getUserFriendlyMessage } from '@/lib/error-handling'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { supabase } from '@/lib/supabase-browser'
 import { 
@@ -35,6 +37,9 @@ export function FileUploadForm() {
   const { roles } = useRoles()
   const { triggerBatchEvaluation, processQueue } = useEvaluations()
   const router = useRouter()
+  const showError = useErrorToast()
+  const showSuccess = useSuccessToast()
+  const showWarning = useWarningToast()
   const [files, setFiles] = useState<UploadFile[]>([])
   const [selectedRole, setSelectedRole] = useState<string>('')
   const [sessionId] = useState(() => `session-${Date.now()}-${Math.random().toString(36).substring(2)}`)
@@ -110,13 +115,21 @@ export function FileUploadForm() {
 
     } catch (error: any) {
       console.error('File processing error:', error)
+      
+      const errorMessage = getUserFriendlyMessage(error)
+      
       setFiles(prev => prev.map(f => 
         f.id === uploadFile.id ? { 
           ...f, 
           status: 'error',
-          error: error.message
+          error: errorMessage
         } : f
       ))
+      
+      showError(
+        'File Processing Failed',
+        `Failed to process ${uploadFile.file.name}: ${errorMessage}`
+      )
     }
   }
 
@@ -133,21 +146,22 @@ export function FileUploadForm() {
     }
 
     try {
-      // Create upload session
+      // Create evaluation session for this upload
       const { data: session, error: sessionError } = await supabase
-        .from('upload_sessions')
+        .from('evaluation_sessions')
         .insert({
           role_id: selectedRole,
           user_id: user!.id,
-          files_total: pendingFiles.length,
-          session_name: `Upload ${new Date().toLocaleDateString()}`
+          total_files: pendingFiles.length,
+          session_name: `Upload ${new Date().toLocaleDateString()}`,
+          status: 'active'
         })
         .select()
         .single()
 
       if (sessionError) {
-        console.error('Failed to create upload session:', sessionError)
-        alert('Failed to create upload session')
+        console.error('Failed to create evaluation session:', sessionError)
+        alert('Failed to create evaluation session')
         return
       }
 
@@ -161,9 +175,15 @@ export function FileUploadForm() {
 
       // After all files are processed, trigger evaluation
       await triggerEvaluationForSession(updatedSessionId)
-    } catch (error) {
+      
+      showSuccess(
+        'Files Processed Successfully',
+        `Successfully processed ${pendingFiles.length} files and started AI evaluation.`
+      )
+    } catch (error: any) {
       console.error('Upload process failed:', error)
-      alert('Upload process failed')
+      const errorMessage = getUserFriendlyMessage(error)
+      showError('Upload Process Failed', errorMessage)
     }
   }
 

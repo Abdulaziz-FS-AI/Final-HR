@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { AIEvaluationService } from '@/lib/ai-evaluation'
+import { supabase } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,18 +14,49 @@ export async function POST(request: NextRequest) {
         // Evaluate single candidate
         const { roleId, fileId, resumeText, contactInfo } = params
         
-        if (!roleId || !fileId || !resumeText) {
+        if (!roleId || !fileId) {
           return NextResponse.json(
-            { error: 'Missing required parameters: roleId, fileId, resumeText' },
+            { error: 'Missing required parameters: roleId, fileId' },
             { status: 400 }
           )
+        }
+
+        // If resumeText is not provided, fetch it from the file_uploads table
+        let actualResumeText = resumeText
+        let actualContactInfo = contactInfo
+
+        if (!actualResumeText) {
+          const { data: fileData, error: fileError } = await supabase
+            .from('file_uploads')
+            .select('extracted_text')
+            .eq('id', fileId)
+            .single()
+
+          if (fileError || !fileData?.extracted_text) {
+            return NextResponse.json(
+              { error: 'Could not retrieve resume text for evaluation' },
+              { status: 400 }
+            )
+          }
+
+          actualResumeText = fileData.extracted_text
+          
+          // Extract contact info if not provided
+          if (!actualContactInfo) {
+            const emailMatch = actualResumeText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)
+            const phoneMatch = actualResumeText.match(/[\d\s\-\(\)\.+]{10,}/)
+            actualContactInfo = {
+              email: emailMatch?.[0],
+              phone: phoneMatch?.[0]
+            }
+          }
         }
 
         const result = await evaluationService.evaluateCandidate({
           roleId,
           fileId,
-          resumeText,
-          contactInfo
+          resumeText: actualResumeText,
+          contactInfo: actualContactInfo
         })
 
         return NextResponse.json({

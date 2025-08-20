@@ -2,6 +2,7 @@
 
 import { supabase } from './supabase'
 import { AIEvaluationRequest, AIEvaluationResponse, RoleWithDetails, FileUpload } from '@/types'
+import { handleApiError, createAppError, ErrorLogger } from './error-handling'
 
 export class AIEvaluationService {
   private readonly HYPERBOLIC_API_URL = 'https://api.hyperbolic.xyz/v1/chat/completions'
@@ -38,8 +39,19 @@ export class AIEvaluationService {
       return evaluation
 
     } catch (error: any) {
-      console.error('AI Evaluation failed:', error)
-      throw new Error(`AI Evaluation failed: ${error.message}`)
+      const errorLogger = ErrorLogger.getInstance()
+      const appError = handleApiError(error)
+      
+      await errorLogger.logError(appError, {
+        component: 'AIEvaluationService',
+        action: 'evaluateCandidate',
+        metadata: {
+          roleId: request.roleId,
+          fileId: request.fileId
+        }
+      })
+      
+      throw appError
     }
   }
 
@@ -570,14 +582,14 @@ Respond with ONLY the JSON object, no additional text.`
       throw new Error('No extracted text available for evaluation')
     }
 
-    // Get upload session to determine role
-    const { data: uploadSession, error: sessionError } = await supabase
-      .from('upload_sessions')
+    // Get evaluation session to determine role
+    const { data: evaluationSession, error: sessionError } = await supabase
+      .from('evaluation_sessions')
       .select('role_id')
       .eq('id', file.session_id)
       .single()
 
-    if (sessionError || !uploadSession) {
+    if (sessionError || !evaluationSession) {
       throw new Error('Could not determine role for evaluation')
     }
 
@@ -586,7 +598,7 @@ Respond with ONLY the JSON object, no additional text.`
 
     // Perform evaluation
     await this.evaluateCandidate({
-      roleId: uploadSession.role_id,
+      roleId: evaluationSession.role_id,
       fileId: file.id,
       resumeText: file.extracted_text,
       contactInfo

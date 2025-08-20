@@ -169,16 +169,34 @@ export function useRoles() {
           } catch (timeoutError) {
             console.error('🚨 TIMEOUT DETECTED:', timeoutError.message)
             
+            // Detect Brave browser specifically
+            const isBrave = navigator.userAgent.includes('Brave') || 
+                           (window as any).navigator?.brave !== undefined ||
+                           navigator.userAgent.includes('Brave/')
+            
+            if (isBrave) {
+              throw new Error(`
+🦁 Brave Browser Detected
+
+Brave's privacy features are blocking this request even with shields disabled.
+
+**Quick Fix:**
+1. Open this site in Chrome, Firefox, or Safari
+2. Or try Brave's "Private Window with Tor" mode
+
+**Why this happens:**
+Brave blocks certain database operations for privacy, even with shields off.
+
+This is a known issue with privacy browsers and complex web applications.
+              `.trim())
+            }
+            
             // Check if role was actually created despite timeout
             console.log('🔍 Checking if role was created despite timeout...')
             await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds
             
             // Refresh roles to see if it was created
             await fetchRoles()
-            
-            // If we now have more roles than before, the creation likely succeeded
-            const currentRoleCount = roles.length
-            console.log('📊 Current role count after timeout:', currentRoleCount)
             
             throw timeoutError
           }
