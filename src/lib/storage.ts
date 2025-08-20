@@ -20,21 +20,32 @@ export class StorageService {
     
     const path = `resumes/${userId}/${year}/${month}/${extractionId}.pdf`
     
-    const { data, error } = await supabase.storage
-      .from(STORAGE_BUCKETS.RESUMES)
-      .upload(path, file, {
-        contentType: 'application/pdf',
-        upsert: false
-      })
-    
-    if (error) throw error
-    
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from(STORAGE_BUCKETS.RESUMES)
-      .getPublicUrl(path)
-    
-    return publicUrl
+    try {
+      const { data, error } = await supabase.storage
+        .from(STORAGE_BUCKETS.RESUMES)
+        .upload(path, file, {
+          contentType: 'application/pdf',
+          upsert: false
+        })
+      
+      if (error) {
+        // Check if it's a bucket not found error
+        if (error.message?.includes('Bucket not found')) {
+          throw new Error('Storage bucket not configured. Please contact support.')
+        }
+        throw error
+      }
+      
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from(STORAGE_BUCKETS.RESUMES)
+        .getPublicUrl(path)
+      
+      return publicUrl
+    } catch (error: any) {
+      console.error('Storage upload error:', error)
+      throw new Error(error.message || 'Failed to upload file')
+    }
   }
 
   /**
@@ -104,10 +115,10 @@ export class StorageService {
       return { valid: false, error: 'Only PDF files are allowed' }
     }
 
-    // Check file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024 // 5MB
+    // Check file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024 // 10MB
     if (file.size > maxSize) {
-      return { valid: false, error: 'File size must be less than 5MB' }
+      return { valid: false, error: 'File size must be less than 10MB' }
     }
 
     // Check file name
