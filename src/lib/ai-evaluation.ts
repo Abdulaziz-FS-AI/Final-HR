@@ -607,27 +607,15 @@ Respond with ONLY the JSON object, no additional text.`
 
   /**
    * Extract contact information from resume text
+   * Let AI handle this - just return empty for now
    */
   private extractContactInfo(resumeText: string): any {
-    const emailMatch = resumeText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)
-    const phoneMatch = resumeText.match(/[\+]?[\d\s\-\(\)\.\+]{10,}/)
-    
-    // Try to extract name (look for patterns at the beginning)
-    const lines = resumeText.split('\n').filter(line => line.trim())
-    let nameMatch = null
-    
-    for (const line of lines.slice(0, 5)) { // Check first 5 lines
-      const possibleName = line.match(/^([A-Z][a-z]+\s+[A-Z][a-z]+)/)
-      if (possibleName && !line.includes('@') && !line.includes('http')) {
-        nameMatch = possibleName[1]
-        break
-      }
-    }
-
+    // Don't parse - send raw text to AI
+    // AI will extract all information needed
     return {
-      name: nameMatch,
-      email: emailMatch?.[0],
-      phone: phoneMatch?.[0]
+      name: null,
+      email: null, 
+      phone: null
     }
   }
 

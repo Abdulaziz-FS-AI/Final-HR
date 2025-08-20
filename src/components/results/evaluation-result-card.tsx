@@ -62,18 +62,33 @@ export function EvaluationResultCard({ evaluation, onViewDetails }: EvaluationRe
                 <div className="flex items-center text-sm text-gray-500 space-x-4">
                   <div className="flex items-center">
                     <Briefcase className="h-4 w-4 mr-1" />
-                    {evaluation.role?.title || 'No Role'}
+                    {evaluation.session?.role?.title || evaluation.role?.title || 'No Role'}
                   </div>
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 mr-1" />
-                    {formatDate(evaluation.created_at || '')}
+                    {evaluation.created_at ? formatDate(evaluation.created_at) : 'No date'}
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Contact Info */}
-            {(evaluation.file?.extracted_text?.includes('@') || evaluation.file?.extracted_text?.includes('phone')) && (
+            {evaluation.candidate_email || evaluation.candidate_phone ? (
+              <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                {evaluation.candidate_email && (
+                  <div className="flex items-center">
+                    <Mail className="h-4 w-4 mr-1" />
+                    {evaluation.candidate_email}
+                  </div>
+                )}
+                {evaluation.candidate_phone && (
+                  <div className="flex items-center">
+                    <Phone className="h-4 w-4 mr-1" />
+                    {evaluation.candidate_phone}
+                  </div>
+                )}
+              </div>
+            ) : (evaluation.file?.extracted_text?.includes('@') || evaluation.file?.extracted_text?.includes('phone')) && (
               <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
                 {evaluation.file.extracted_text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/) && (
                   <div className="flex items-center">
@@ -98,7 +113,7 @@ export function EvaluationResultCard({ evaluation, onViewDetails }: EvaluationRe
                   <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
                     <div 
                       className="bg-blue-600 h-2 rounded-full" 
-                      style={{ width: `${evaluation.overall_score}%` }}
+                      style={{ width: `${Math.min(100, Math.max(0, evaluation.overall_score || 0))}%` }}
                     ></div>
                   </div>
                   <span className="text-sm font-medium">{evaluation.overall_score}%</span>
@@ -110,11 +125,11 @@ export function EvaluationResultCard({ evaluation, onViewDetails }: EvaluationRe
                   <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
                     <div 
                       className="bg-green-600 h-2 rounded-full" 
-                      style={{ width: `${(evaluation.ai_confidence || 0) * 100}%` }}
+                      style={{ width: `${Math.min(100, Math.max(0, (evaluation.ai_confidence || 0) * (evaluation.ai_confidence > 1 ? 1 : 100)))}%` }}
                     ></div>
                   </div>
                   <span className="text-sm font-medium">
-                    {Math.round((evaluation.ai_confidence || 0) * 100)}%
+                    {Math.round((evaluation.ai_confidence || 0) * (evaluation.ai_confidence > 1 ? 1 : 100))}%
                   </span>
                 </div>
               </div>
@@ -123,18 +138,20 @@ export function EvaluationResultCard({ evaluation, onViewDetails }: EvaluationRe
             {/* Quick Stats */}
             <div className="flex items-center space-x-4">
               {/* Recommendations Count */}
-              {Array.isArray(evaluation.recommendations) && evaluation.recommendations.length > 0 && (
+              {((Array.isArray(evaluation.recommendations) && evaluation.recommendations.length > 0) || 
+                (evaluation.expanded_view?.recommendations && evaluation.expanded_view.recommendations.length > 0)) && (
                 <div className="flex items-center text-sm text-green-600">
                   <CheckCircle className="h-4 w-4 mr-1" />
-                  {evaluation.recommendations.length} recommendations
+                  {(evaluation.recommendations?.length || evaluation.expanded_view?.recommendations?.length || 0)} recommendations
                 </div>
               )}
               
               {/* Red Flags Count */}
-              {Array.isArray(evaluation.red_flags) && evaluation.red_flags.length > 0 && (
+              {((Array.isArray(evaluation.red_flags) && evaluation.red_flags.length > 0) || 
+                (evaluation.expanded_view?.red_flags && evaluation.expanded_view.red_flags.length > 0)) && (
                 <div className="flex items-center text-sm text-red-600">
                   <AlertTriangle className="h-4 w-4 mr-1" />
-                  {evaluation.red_flags.length} red flags
+                  {(evaluation.red_flags?.length || evaluation.expanded_view?.red_flags?.length || 0)} red flags
                 </div>
               )}
             </div>
@@ -144,8 +161,8 @@ export function EvaluationResultCard({ evaluation, onViewDetails }: EvaluationRe
           <div className="flex flex-col items-end space-y-3">
             {/* Overall Score */}
             <div className="text-center">
-              <div className={`text-3xl font-bold px-4 py-2 rounded-lg ${getScoreColor(evaluation.overall_score)}`}>
-                {evaluation.overall_score}
+              <div className={`text-3xl font-bold px-4 py-2 rounded-lg ${getScoreColor(evaluation.overall_score || 0)}`}>
+                {Math.round(evaluation.overall_score || 0)}
               </div>
               <p className="text-sm text-gray-500 mt-1">
                 {getScoreLabel(evaluation.overall_score)}

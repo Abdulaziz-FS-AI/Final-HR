@@ -34,7 +34,9 @@ export function AnalyticsDashboard() {
     let filteredEvaluations = evaluations
 
     if (selectedRole !== 'all') {
-      filteredEvaluations = evaluations.filter(evaluation => evaluation.role?.id === selectedRole)
+      filteredEvaluations = evaluations.filter(evaluation => 
+        evaluation.role_id === selectedRole || evaluation.session?.role?.id === selectedRole
+      )
     }
 
     if (timeframe !== 'all') {
@@ -54,7 +56,10 @@ export function AnalyticsDashboard() {
       }
       
       filteredEvaluations = filteredEvaluations.filter(
-        evaluation => new Date() >= cutoffDate
+        evaluation => {
+          const evalDate = new Date(evaluation.created_at || evaluation.evaluated_at)
+          return evalDate >= cutoffDate
+        }
       )
     }
 
@@ -85,8 +90,9 @@ export function AnalyticsDashboard() {
     // Skills analysis
     const skillsAnalysis: any = {}
     evaluationsList.forEach(evaluation => {
-      if (Array.isArray(evaluation.skills_analysis)) {
-        evaluation.skills_analysis.forEach((skill: any) => {
+      const skillsData = evaluation.expanded_view?.skills_analysis || evaluation.skills_analysis
+      if (Array.isArray(skillsData)) {
+        skillsData.forEach((skill: any) => {
           if (!skillsAnalysis[skill.skill_name]) {
             skillsAnalysis[skill.skill_name] = {
               availability: 0,
@@ -119,8 +125,9 @@ export function AnalyticsDashboard() {
     // Questions analysis
     const questionsAnalysis: any = {}
     evaluationsList.forEach(evaluation => {
-      if (Array.isArray(evaluation.questions_analysis)) {
-        evaluation.questions_analysis.forEach((question: any) => {
+      const questionsData = evaluation.expanded_view?.questions_analysis || evaluation.questions_analysis
+      if (Array.isArray(questionsData)) {
+        questionsData.forEach((question: any) => {
           if (!questionsAnalysis[question.question]) {
             questionsAnalysis[question.question] = {
               positiveRate: 0,

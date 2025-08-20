@@ -274,60 +274,43 @@ Cloud: AWS, Docker, Kubernetes
    */
   private validateExtraction(text: string): any {
     const issues: string[] = []
-    let confidence = 1.0
+    let confidence = 0.8 // Start with good confidence
     
-    // Check text length
-    if (!text || text.length < 100) {
-      issues.push('Text too short')
-      confidence -= 0.5
+    // Basic validation - just check if we have text
+    if (!text || text.length < 10) {
+      issues.push('No text extracted')
+      confidence = 0
+    } else if (text.length < 50) {
+      issues.push('Very short text - may be incomplete')
+      confidence = 0.3
     }
     
-    // Check for common resume keywords
-    const resumeKeywords = [
-      'experience', 'education', 'skills', 'work',
-      'university', 'degree', 'email', 'phone'
-    ]
-    
-    const lowerText = text.toLowerCase()
-    const foundKeywords = resumeKeywords.filter(kw => lowerText.includes(kw))
-    
-    if (foundKeywords.length < 2) {
-      issues.push('Missing resume keywords')
-      confidence -= 0.3
+    // Check for binary garbage (PDF extraction failure indicator)
+    if (text.includes('endstream') || text.includes('endobj') || text.includes('/Type /Font')) {
+      issues.push('PDF structure detected - extraction may have failed')
+      confidence = 0.1
     }
     
-    // Extract contact info
-    const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)
-    const phoneMatch = text.match(/[\d\s\-\(\)\.+]{10,}/)
-    const nameMatch = text.match(/^([A-Z][a-z]+ [A-Z][a-z]+)/m)
-    
-    // Check for sections
-    const hasExperience = /experience|work|employment/i.test(text)
-    const hasEducation = /education|degree|university|college/i.test(text)
-    const hasSkills = /skills|technologies|languages|tools/i.test(text)
-    
-    // Check for garbage characters
-    const garbageRatio = (text.match(/[^\x20-\x7E\n\r\t]/g) || []).length / text.length
-    if (garbageRatio > 0.1) {
-      issues.push('Too many special characters')
-      confidence -= 0.2
+    // Very basic check for excessive special characters
+    const printableText = text.replace(/[\x00-\x1F\x7F-\x9F]/g, '')
+    if (printableText.length < text.length * 0.8) {
+      issues.push('Too many non-printable characters')
+      confidence = 0.2
     }
     
-    // Calculate quality score
-    const score = Math.round(confidence * 100)
-    
+    // Don't parse content - let AI do it
     return {
-      confidence: Math.max(0, confidence),
-      score,
+      confidence: Math.max(0.1, confidence), // Always proceed if we have any text
+      score: Math.round(confidence * 100),
       issues,
-      hasContact: !!(emailMatch || phoneMatch),
-      hasExperience,
-      hasEducation,
-      hasSkills,
-      looksLikeResume: foundKeywords.length >= 3 && confidence > 0.5,
-      email: emailMatch?.[0] || null,
-      phone: phoneMatch?.[0] || null,
-      name: nameMatch?.[1] || null
+      hasContact: true, // Assume yes, let AI verify
+      hasExperience: true, // Assume yes, let AI verify
+      hasEducation: true, // Assume yes, let AI verify
+      hasSkills: true, // Assume yes, let AI verify
+      looksLikeResume: text.length > 50, // Very basic check
+      email: null, // Let AI extract
+      phone: null, // Let AI extract
+      name: null // Let AI extract
     }
   }
   

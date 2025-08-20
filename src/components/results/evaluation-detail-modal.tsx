@@ -47,10 +47,11 @@ export function EvaluationDetailModal({ evaluation, onClose }: EvaluationDetailM
     }
   }
 
-  const skillsAnalysis = Array.isArray(evaluation.skills_analysis) ? evaluation.skills_analysis as any[] : []
-  const questionsAnalysis = Array.isArray(evaluation.questions_analysis) ? evaluation.questions_analysis as any[] : []
-  const recommendations = Array.isArray(evaluation.recommendations) ? evaluation.recommendations as string[] : []
-  const redFlags = Array.isArray(evaluation.red_flags) ? evaluation.red_flags as string[] : []
+  const skillsAnalysis = evaluation.expanded_view?.skills_analysis || evaluation.skills_analysis || []
+  const questionsAnalysis = evaluation.expanded_view?.questions_analysis || evaluation.questions_analysis || []
+  const recommendations = evaluation.expanded_view?.recommendations || evaluation.recommendations || []
+  const redFlags = evaluation.expanded_view?.red_flags || evaluation.red_flags || []
+  const analysisSummary = evaluation.expanded_view?.analysis_summary || evaluation.analysis_summary || ''
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -66,7 +67,7 @@ export function EvaluationDetailModal({ evaluation, onClose }: EvaluationDetailM
                 {evaluation.candidate_name || 'Unknown Candidate'}
               </h2>
               <p className="text-sm text-gray-500">
-                {evaluation.role?.title} • Evaluated on {new Date(evaluation.created_at || '').toLocaleDateString()}
+                {evaluation.session?.role?.title || evaluation.role?.title || 'Unknown Role'} • Evaluated on {evaluation.created_at ? new Date(evaluation.created_at).toLocaleDateString() : 'Unknown Date'}
               </p>
             </div>
           </div>
