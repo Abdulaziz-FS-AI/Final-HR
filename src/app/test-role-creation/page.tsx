@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/lib/auth-context'
-import { supabase } from '@/lib/supabase-browser'
+import { supabase } from "@/lib/supabase"
 
 export default function TestRoleCreationPage() {
   const [testing, setTesting] = useState(false)

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User } from '@supabase/supabase-js'
-import { supabase } from './supabase-browser'
+import { supabase } from "@/lib/supabase"
 import { errorMonitoring } from './error-monitoring'
 
 // Types

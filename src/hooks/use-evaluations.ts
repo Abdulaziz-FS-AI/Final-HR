@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase-browser'
+import { supabase } from "@/lib/supabase"
 import { EvaluationResult, EvaluationResultWithDetails } from '@/types'
 import { useAuth } from '@/lib/auth-context'
 

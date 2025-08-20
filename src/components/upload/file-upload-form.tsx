@@ -11,7 +11,7 @@ import { PDFExtractionService } from '@/lib/pdf-extraction'
 import { useErrorToast, useSuccessToast, useWarningToast } from '@/components/ui/toast'
 import { getUserFriendlyMessage } from '@/lib/error-handling'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { supabase } from '@/lib/supabase-browser'
+import { supabase } from "@/lib/supabase"
 import { 
   Upload, 
   FileText, 

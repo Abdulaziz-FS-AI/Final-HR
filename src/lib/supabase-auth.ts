@@ -1,6 +1,6 @@
 'use client'
 
-import { supabase } from './supabase-browser'
+import { supabase } from "@/lib/supabase"
 
 /**
  * Enhanced Supabase client with explicit auth token management
