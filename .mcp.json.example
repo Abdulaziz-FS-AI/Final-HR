@@ -10,6 +10,10 @@
       "env": {
         "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
       }
+    },
+    "vercel": {
+      "transport": "http",
+      "url": "https://mcp.vercel.com"
     }
   }
 }

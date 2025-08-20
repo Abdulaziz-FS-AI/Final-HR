@@ -6,12 +6,14 @@ import { Role, RoleWithDetails, RoleFormData } from '@/types'
 import { useAuth } from '@/lib/auth-context'
 import { getUserFriendlyError } from '@/lib/error-messages'
 import { withDatabaseRetry } from '@/lib/retry-utils'
+import { useErrorMonitoring } from '@/lib/error-monitoring'
 
 export function useRoles() {
   const [roles, setRoles] = useState<RoleWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
+  const { reportError } = useErrorMonitoring()
 
   const fetchRoles = useCallback(async () => {
     if (!user || !user.id) {
@@ -236,6 +238,12 @@ export function useRoles() {
         errorCode: error?.code,
         fullError: error
       })
+      
+      // Report to error monitoring
+      reportError(
+        `Role creation failed: ${error?.message || 'Unknown error'}`, 
+        'high'
+      )
       
       // Transaction automatically handles rollback, no manual cleanup needed
       

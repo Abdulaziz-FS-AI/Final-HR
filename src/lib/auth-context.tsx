@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User } from '@supabase/supabase-js'
 import { supabase } from './supabase-browser'
+import { errorMonitoring } from './error-monitoring'
 
 // Types
 interface AuthUser {
@@ -173,14 +174,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profile) {
         // Profile exists
         console.log('✅ Profile found')
-        setUser({
+        const userData = {
           id: profile.id,
           email: profile.email,
           firstName: profile.first_name || undefined,
           lastName: profile.last_name || undefined,
           companyName: profile.company_name || undefined,
           avatarUrl: profile.avatar_url || undefined,
-        })
+        }
+        setUser(userData)
+        // Set user ID for error monitoring
+        errorMonitoring.setUserId(profile.id)
       } else {
         // Profile doesn't exist, create it
         console.log('📝 Creating new profile')
