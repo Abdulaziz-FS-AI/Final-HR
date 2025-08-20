@@ -494,7 +494,7 @@ Respond with ONLY the JSON object, no additional text.`
       .select('id')
       .eq('role_id', roleId)
       .eq('user_id', userId)
-      .eq('status', 'active')
+      .eq('status', 'pending')
       .single()
 
     if (existingSession) {
@@ -530,7 +530,7 @@ Respond with ONLY the JSON object, no additional text.`
         role_id: roleId,
         user_id: userId,
         session_name: `Evaluation ${new Date().toLocaleDateString()}`,
-        status: 'active',
+        status: 'pending',
         total_resumes: 0,
         role_snapshot: roleSnapshot
       })

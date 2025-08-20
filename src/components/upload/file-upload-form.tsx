@@ -198,7 +198,7 @@ export function FileUploadForm() {
         user_id: user!.id,
         total_resumes: pendingFiles.length,
         session_name: `Upload ${new Date().toLocaleDateString()}`,
-        status: 'active' as const,
+        status: 'pending',
         role_snapshot: roleSnapshot
       }
       
