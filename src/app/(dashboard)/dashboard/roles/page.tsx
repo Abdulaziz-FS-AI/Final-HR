@@ -4,11 +4,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { useRoles } from '@/hooks/use-roles'
 import { useRouter } from 'next/navigation'
-import { Briefcase, Plus, Users, Settings } from 'lucide-react'
+import { Briefcase, Plus, Users, Trash2 } from 'lucide-react'
 
 export default function RolesPage() {
-  const { roles, loading, error } = useRoles()
+  const { roles, loading, error, deleteRole } = useRoles()
   const router = useRouter()
+
+  const handleDeleteRole = async (roleId: string, roleTitle: string) => {
+    if (window.confirm(`Are you sure you want to delete "${roleTitle}"? This action cannot be undone.`)) {
+      try {
+        await deleteRole(roleId)
+      } catch (err: any) {
+        alert(`Failed to delete role: ${err.message}`)
+      }
+    }
+  }
 
   if (loading) {
     return (
@@ -95,10 +105,11 @@ export default function RolesPage() {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => router.push(`/dashboard/roles/${role.id}/edit`)}
-                    title="Edit Role"
+                    onClick={() => handleDeleteRole(role.id, role.title)}
+                    title="Delete Role"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
                   >
-                    <Settings className="h-3 w-3" />
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
               </CardContent>

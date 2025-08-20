@@ -15,7 +15,6 @@ import {
   Plus,
   Briefcase
 } from 'lucide-react'
-import { AuthDebug } from '@/components/auth-debug'
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -51,9 +50,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Debug Component - Remove this after testing */}
-      <AuthDebug />
-      
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

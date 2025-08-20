@@ -62,64 +62,42 @@ export function useRoles() {
   }, [user])
 
   const createRole = async (roleData: RoleFormData) => {
-    console.log('🚀 BRAVE DEBUG: createRole function called')
-    console.log('🚀 BRAVE DEBUG: Browser user agent:', navigator.userAgent)
-    console.log('🚀 BRAVE DEBUG: Role data received:', roleData)
-    console.log('🚀 Starting createRole function...')
+    console.log('🚀 Creating role...')
     
     // Enhanced validation
     if (!user) throw new Error('Authentication required. Please log in.')
     if (!user.id) throw new Error('User session invalid. Please refresh and try again.')
 
-    // Import validation and transformation utilities at the top
-    console.log('📦 Importing validation utilities...')
-    
+    // Import utilities
     let validateRoleForm, transformRoleFormData, generateRoleCreationSummary, validateTransformedData, createUserSummary, generateEvaluationPrompt
     
     try {
       const validationModule = await import('@/utils/form-validation')
       validateRoleForm = validationModule.validateRoleForm
-      console.log('✅ Form validation imported')
       
-      console.log('📦 Importing transformation utilities...')
       const transformModule = await import('@/utils/role-data-transformer')
       transformRoleFormData = transformModule.transformRoleFormData
       generateRoleCreationSummary = transformModule.generateRoleCreationSummary
       validateTransformedData = transformModule.validateTransformedData
       createUserSummary = transformModule.createUserSummary
       generateEvaluationPrompt = transformModule.generateEvaluationPrompt
-      console.log('✅ All imports successful')
     } catch (importError) {
-      console.error('❌ BRAVE DEBUG: Import failed:', importError)
+      console.error('Import failed:', importError)
       throw new Error(`Module import failed: ${importError.message}`)
     }
 
-    // ===== STEP 1: COMPREHENSIVE FORM VALIDATION =====
-    console.log('📝 Validating form data...')
+    // Validate form
     const validation = validateRoleForm(roleData)
     if (!validation.isValid) {
-      const errorMessage = `Form validation failed:\n${validation.errors.join('\n')}`
-      console.error('❌ Validation failed:', validation.errors)
-      throw new Error(errorMessage)
+      throw new Error(`Form validation failed: ${validation.errors.join(', ')}`)
     }
-    console.log('✅ Form validation passed')
 
-    // ===== STEP 2: SIMPLIFIED AUTHENTICATION CHECK =====
-    console.log('🔐 Checking authentication...')
-    
-    // Skip session verification since user is already authenticated in context
+    // Check authentication
     if (!user?.id) {
       throw new Error('User session invalid. Please refresh and try again.')
     }
-    
-    console.log('✅ User authenticated:', user.email)
-    console.log('🔑 Creating role with authenticated user:', {
-      userId: user.id,
-      userEmail: user.email
-    })
 
-    // ===== STEP 3: DATA TRANSFORMATION =====
-    console.log('🔄 Transforming form data to database format...')
+    // Transform data
     
     // Declare transformedData in outer scope
     let transformedData: any
@@ -169,12 +147,11 @@ export function useRoles() {
       }
       
       // Use the transaction function with retry logic
-      console.log('📞 Calling RPC with data:', JSON.stringify(transactionData, null, 2))
+      console.log('📞 Calling RPC...')
       
       const result = await withDatabaseRetry(
         async () => {
           console.log('🔄 Attempting RPC call...')
-          console.log('📦 Transaction data being sent:', JSON.stringify(transactionData, null, 2))
           
           // Add timeout and enhanced error handling for Brave browser
           const rpcPromise = supabase.rpc('create_role_with_details', transactionData)
@@ -183,14 +160,26 @@ export function useRoles() {
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => {
               reject(new Error('RPC call timed out - this may be due to browser blocking. Please try disabling tracking protection for this site.'))
-            }, 8000) // 8 second timeout
+            }, 30000) // 30 second timeout
           })
           
           let rpcResult
           try {
             rpcResult = await Promise.race([rpcPromise, timeoutPromise])
           } catch (timeoutError) {
-            console.error('🚨 BRAVE BLOCKING DETECTED:', timeoutError.message)
+            console.error('🚨 TIMEOUT DETECTED:', timeoutError.message)
+            
+            // Check if role was actually created despite timeout
+            console.log('🔍 Checking if role was created despite timeout...')
+            await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds
+            
+            // Refresh roles to see if it was created
+            await fetchRoles()
+            
+            // If we now have more roles than before, the creation likely succeeded
+            const currentRoleCount = roles.length
+            console.log('📊 Current role count after timeout:', currentRoleCount)
+            
             throw timeoutError
           }
           
