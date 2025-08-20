@@ -17,6 +17,7 @@ export function useRoles() {
 
   const fetchRoles = useCallback(async () => {
     if (!user?.id) {
+      console.warn('No user ID available for fetching roles')
       setLoading(false)
       return
     }
@@ -25,6 +26,25 @@ export function useRoles() {
       setLoading(true)
       setError(null)
       
+      // Debug: Log the user ID being used
+      console.log('🔍 IMPORTANT: Currently logged in as:')
+      console.log('   Email:', user.email)
+      console.log('   User ID:', user.id)
+      console.log('-----------------------------------')
+      
+      // Get session info
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session?.user) {
+        console.log('✅ Session confirmed for:', session.user.email)
+        
+        // Show which roles belong to which account
+        console.log('📋 Role ownership:')
+        console.log('   abdulaziz.fs.ai@gmail.com has role with user_id: 632687b6-01e7-4a5e-9230-95e5d3a7540c')
+        console.log('   abdulaziz747uni@gmail.com has role with user_id: 1fb0a5c4-951d-43bd-8a76-489bf38daa62')
+      }
+      
+      // Now fetch user's roles
       const { data, error } = await supabase
         .from('roles')
         .select(`
@@ -38,11 +58,16 @@ export function useRoles() {
         .eq('is_active', true)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching roles:', error)
+        throw error
+      }
       
+      console.log('Fetched roles for user:', data)
       setRoles(data || [])
       
     } catch (err: any) {
+      console.error('Failed to fetch roles:', err)
       setError(err.message)
       setRoles([])
     } finally {
