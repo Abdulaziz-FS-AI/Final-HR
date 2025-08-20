@@ -134,115 +134,91 @@ export function useRoles() {
     let createdRoleId: string | null = null
 
     try {
-      // ===== STEP 4: CREATE ROLE USING TRANSACTION FUNCTION =====
-      console.log('🚀 Creating role with transaction...')
+      // ===== STEP 4: CREATE ROLE USING DIRECT TABLE INSERTS =====
+      console.log('🚀 Creating role with direct inserts...')
       
-      // Prepare data for the transaction function
-      const transactionData = {
-        p_role_data: transformedData.roleData,
-        p_skills: transformedData.skillsData,
-        p_questions: transformedData.questionsData,
-        p_education_requirements: transformedData.educationData,
-        p_experience_requirements: transformedData.experienceData
+      // Step 1: Insert the main role
+      console.log('📝 Step 1: Creating role...')
+      const { data: roleResult, error: roleError } = await supabase
+        .from('roles')
+        .insert(transformedData.roleData)
+        .select()
+        .single()
+      
+      if (roleError) {
+        console.error('❌ Role insert failed:', roleError)
+        throw new Error(`Failed to create role: ${roleError.message}`)
       }
       
-      // Use the transaction function with retry logic
-      console.log('📞 Calling RPC...')
+      createdRoleId = roleResult.id
+      console.log('✅ Role created successfully:', createdRoleId)
       
-      const result = await withDatabaseRetry(
-        async () => {
-          console.log('🔄 Attempting RPC call...')
-          
-          // Add timeout and enhanced error handling for Brave browser
-          const rpcPromise = supabase.rpc('create_role_with_details', transactionData)
-          
-          // Race between the RPC call and a timeout
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => {
-              reject(new Error('RPC call timed out - this may be due to browser blocking. Please try disabling tracking protection for this site.'))
-            }, 30000) // 30 second timeout
-          })
-          
-          let rpcResult
-          try {
-            rpcResult = await Promise.race([rpcPromise, timeoutPromise])
-          } catch (timeoutError) {
-            console.error('🚨 TIMEOUT DETECTED:', timeoutError.message)
-            
-            // Detect Brave browser specifically
-            const isBrave = navigator.userAgent.includes('Brave') || 
-                           (window as any).navigator?.brave !== undefined ||
-                           navigator.userAgent.includes('Brave/')
-            
-            if (isBrave) {
-              throw new Error(`
-🦁 Brave Browser Detected
-
-Brave's privacy features are blocking this request even with shields disabled.
-
-**Quick Fix:**
-1. Open this site in Chrome, Firefox, or Safari
-2. Or try Brave's "Private Window with Tor" mode
-
-**Why this happens:**
-Brave blocks certain database operations for privacy, even with shields off.
-
-This is a known issue with privacy browsers and complex web applications.
-              `.trim())
-            }
-            
-            // Check if role was actually created despite timeout
-            console.log('🔍 Checking if role was created despite timeout...')
-            await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds
-            
-            // Refresh roles to see if it was created
-            await fetchRoles()
-            
-            throw timeoutError
-          }
-          
-          const { data, error } = rpcResult
-          
-          console.log('📡 RPC response:', { 
-            data, 
-            error, 
-            hasData: !!data,
-            dataType: typeof data,
-            errorCode: error?.code,
-            errorMessage: error?.message,
-            errorDetails: error?.details,
-            errorHint: error?.hint
-          })
-          
-          if (error) {
-            console.error('❌ RPC error details:', {
-              code: error.code,
-              message: error.message,
-              details: error.details,
-              hint: error.hint,
-              fullError: error
-            })
-            throw new Error(`Database error: ${error.message} (Code: ${error.code})`)
-          }
-          
-          if (!data) {
-            throw new Error('No data returned from database function')
-          }
-          
-          return data
-        },
-        'role creation'
-      )
+      // Step 2: Insert skills in parallel
+      const insertPromises: Promise<any>[] = []
       
-      if (!result || typeof result !== 'object' || !('role_id' in result)) {
-        throw new Error('Role creation failed: No role ID returned')
+      if (transformedData.skillsData.length > 0) {
+        console.log('📝 Step 2: Adding skills...')
+        const skillsWithRoleId = transformedData.skillsData.map(skill => ({
+          ...skill,
+          role_id: createdRoleId
+        }))
+        
+        insertPromises.push(
+          supabase.from('role_skills').insert(skillsWithRoleId)
+        )
       }
       
-      createdRoleId = (result as any).role_id
-      console.log('✅ Role created successfully with transaction:', result)
-
-      // Transaction function handles all related inserts atomically
-      // No need for separate inserts anymore
+      if (transformedData.questionsData.length > 0) {
+        console.log('📝 Step 3: Adding questions...')
+        const questionsWithRoleId = transformedData.questionsData.map(question => ({
+          ...question,
+          role_id: createdRoleId
+        }))
+        
+        insertPromises.push(
+          supabase.from('role_questions').insert(questionsWithRoleId)
+        )
+      }
+      
+      if (transformedData.educationData.length > 0) {
+        console.log('📝 Step 4: Adding education requirements...')
+        const educationWithRoleId = transformedData.educationData.map(edu => ({
+          ...edu,
+          role_id: createdRoleId
+        }))
+        
+        insertPromises.push(
+          supabase.from('role_education_requirements').insert(educationWithRoleId)
+        )
+      }
+      
+      if (transformedData.experienceData.length > 0) {
+        console.log('📝 Step 5: Adding experience requirements...')
+        const experienceWithRoleId = transformedData.experienceData.map(exp => ({
+          ...exp,
+          role_id: createdRoleId
+        }))
+        
+        insertPromises.push(
+          supabase.from('role_experience_requirements').insert(experienceWithRoleId)
+        )
+      }
+      
+      // Execute all inserts in parallel for better performance
+      if (insertPromises.length > 0) {
+        console.log(`📦 Executing ${insertPromises.length} related data inserts...`)
+        const results = await Promise.all(insertPromises)
+        
+        // Check for any errors in the parallel inserts
+        const errors = results.filter(result => result.error)
+        if (errors.length > 0) {
+          console.error('❌ Some related data inserts failed:', errors)
+          // Continue anyway - role is created, some data might be missing but not critical
+          console.log('⚠️ Role created but some related data may be incomplete')
+        } else {
+          console.log('✅ All related data inserted successfully')
+        }
+      }
 
       // ===== STEP 5: FINALIZE AND SUCCESS =====
       console.log('🔄 Refreshing roles list...')
@@ -264,7 +240,6 @@ This is a known issue with privacy browsers and complex web applications.
         .single()
       
       console.log('🎉 Role creation completed successfully!')
-      console.log('📊 Final Statistics:', (result as any).stats)
       
       return completeRole || { id: createdRoleId! }
 
@@ -283,30 +258,23 @@ This is a known issue with privacy browsers and complex web applications.
         'high'
       )
       
-      // Transaction automatically handles rollback, no manual cleanup needed
-      
-      // Enhanced error handling for Brave browser compatibility
-      let friendlyError = getUserFriendlyError(error)
-      
-      // Check if this looks like a Brave blocking issue
-      if (error?.message?.includes('timed out') || 
-          error?.message?.includes('browser blocking') ||
-          error?.message?.includes('tracking protection')) {
-        friendlyError = `
-🛡️ Browser Security Feature Detected
-
-Your browser's tracking protection may be blocking this request. To fix this:
-
-**For Brave Browser:**
-1. Click the 🛡️ Brave shield icon in the address bar
-2. Turn off "Block trackers & ads" for this site
-3. Refresh the page and try again
-
-**Alternative:** Try using Chrome, Firefox, or Safari for the best experience.
-
-Original error: ${friendlyError}
-        `.trim()
+      // Basic cleanup if role was created but related data failed
+      if (createdRoleId && error?.message?.includes('related data')) {
+        console.log('🧹 Attempting cleanup of partially created role...')
+        try {
+          await supabase
+            .from('roles')
+            .update({ is_active: false })
+            .eq('id', createdRoleId)
+          console.log('✅ Role marked as inactive for cleanup')
+        } catch (cleanupError) {
+          console.error('❌ Cleanup failed:', cleanupError)
+          // Don't throw - original error is more important
+        }
       }
+      
+      // Enhanced error handling
+      let friendlyError = getUserFriendlyError(error)
       
       throw new Error(friendlyError)
     }
