@@ -14,10 +14,16 @@ export interface ErrorReport {
 class ErrorMonitoring {
   private sessionId: string
   private userId?: string
+  private isClient: boolean
 
   constructor() {
+    this.isClient = typeof window !== 'undefined'
     this.sessionId = this.generateSessionId()
-    this.setupGlobalErrorHandling()
+    
+    // Only setup error handling on client side
+    if (this.isClient) {
+      this.setupGlobalErrorHandling()
+    }
   }
 
   private generateSessionId(): string {
@@ -29,6 +35,9 @@ class ErrorMonitoring {
   }
 
   private setupGlobalErrorHandling() {
+    // Only run on client side
+    if (!this.isClient) return
+
     // Handle unhandled promise rejections
     window.addEventListener('unhandledrejection', (event) => {
       const message = event.reason?.message || event.reason
@@ -81,6 +90,9 @@ class ErrorMonitoring {
   }
 
   reportError(error: Partial<ErrorReport>) {
+    // Only process errors on client side
+    if (!this.isClient) return
+
     const errorReport: ErrorReport = {
       message: error.message || 'Unknown error',
       stack: error.stack,
@@ -124,6 +136,9 @@ class ErrorMonitoring {
   }
 
   private storeErrorLocally(error: ErrorReport) {
+    // Only store errors on client side
+    if (!this.isClient) return
+
     try {
       const storedErrors = JSON.parse(localStorage.getItem('app_errors') || '[]')
       storedErrors.push(error)
@@ -146,6 +161,9 @@ class ErrorMonitoring {
 
   // Method to get stored errors for debugging
   getStoredErrors(): ErrorReport[] {
+    // Only access localStorage on client side
+    if (!this.isClient) return []
+
     try {
       return JSON.parse(localStorage.getItem('app_errors') || '[]')
     } catch {
@@ -155,6 +173,9 @@ class ErrorMonitoring {
 
   // Clear stored errors
   clearStoredErrors() {
+    // Only clear localStorage on client side
+    if (!this.isClient) return
+
     localStorage.removeItem('app_errors')
   }
 }
