@@ -119,6 +119,8 @@ export function useEvaluations(roleId?: string, sessionId?: string) {
 
   const triggerBatchEvaluation = async (sessionId: string, roleId: string) => {
     try {
+      console.log('Triggering batch evaluation for session:', sessionId, 'role:', roleId)
+      
       const response = await fetch('/api/evaluate', {
         method: 'POST',
         headers: {
@@ -132,20 +134,26 @@ export function useEvaluations(roleId?: string, sessionId?: string) {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to trigger batch evaluation')
+        const errorText = await response.text()
+        console.error('Batch evaluation API error:', response.status, errorText)
+        throw new Error(`Failed to trigger batch evaluation: ${response.status}`)
       }
 
       const result = await response.json()
       if (!result.success) {
+        console.error('Batch evaluation failed:', result)
         throw new Error(result.error || 'Batch evaluation failed')
       }
 
+      console.log('Batch evaluation successful:', result)
+      
       // Refresh evaluations
       await fetchEvaluations()
       return result.data
 
     } catch (err: any) {
-      throw new Error(err.message)
+      console.error('Error in triggerBatchEvaluation:', err)
+      throw new Error(`Failed to trigger batch evaluation: ${err.message}`)
     }
   }
 

@@ -128,8 +128,10 @@ export class PDFExtractionService {
       await this.queueForEvaluation(fileRecord.id, sessionId, priority)
       
       // Step 12: Trigger queue processing (async, don't wait)
+      // This is non-critical - if it fails, the queue will be processed later
       this.triggerQueueProcessing().catch(error => {
-        console.log('Queue processing trigger failed (non-critical):', error)
+        console.warn('Queue processing trigger failed (non-critical):', error.message)
+        // Queue will be processed on next upload or manual trigger
       })
       
       return {
@@ -424,6 +426,7 @@ Cloud: AWS, Docker, Kubernetes
 
   /**
    * Trigger queue processing (async)
+   * This is a best-effort operation - failures are non-critical
    */
   private async triggerQueueProcessing(): Promise<void> {
     try {
@@ -436,13 +439,17 @@ Cloud: AWS, Docker, Kubernetes
       })
 
       if (!response.ok) {
-        throw new Error(`Queue processing API failed: ${response.status}`)
+        // Log but don't throw - queue processing is async and non-critical
+        console.warn(`Queue processing API returned ${response.status} - queue will be processed later`)
+        return
       }
 
-      console.log('Queue processing triggered successfully')
+      const result = await response.json()
+      console.log('Queue processing triggered:', result.message)
     } catch (error) {
-      console.error('Failed to trigger queue processing:', error)
-      throw error
+      // Network errors or other issues - log but don't throw
+      console.warn('Queue processing trigger failed:', error)
+      // The queue will be processed on the next successful trigger
     }
   }
 }

@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'openai/gpt-oss-120b',
+        model: 'gpt-oss',
         messages: [
           {
             role: 'system',
