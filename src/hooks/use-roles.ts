@@ -176,7 +176,25 @@ export function useRoles() {
           console.log('🔄 Attempting RPC call...')
           console.log('📦 Transaction data being sent:', JSON.stringify(transactionData, null, 2))
           
-          const { data, error } = await supabase.rpc('create_role_with_details', transactionData)
+          // Add timeout and enhanced error handling for Brave browser
+          const rpcPromise = supabase.rpc('create_role_with_details', transactionData)
+          
+          // Race between the RPC call and a timeout
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+              reject(new Error('RPC call timed out - this may be due to browser blocking. Please try disabling tracking protection for this site.'))
+            }, 15000) // 15 second timeout
+          })
+          
+          let rpcResult
+          try {
+            rpcResult = await Promise.race([rpcPromise, timeoutPromise])
+          } catch (timeoutError) {
+            console.error('🚨 BRAVE BLOCKING DETECTED:', timeoutError.message)
+            throw timeoutError
+          }
+          
+          const { data, error } = rpcResult
           
           console.log('📡 RPC response:', { 
             data, 
@@ -260,8 +278,29 @@ export function useRoles() {
       
       // Transaction automatically handles rollback, no manual cleanup needed
       
-      // Throw user-friendly error message
-      const friendlyError = getUserFriendlyError(error)
+      // Enhanced error handling for Brave browser compatibility
+      let friendlyError = getUserFriendlyError(error)
+      
+      // Check if this looks like a Brave blocking issue
+      if (error?.message?.includes('timed out') || 
+          error?.message?.includes('browser blocking') ||
+          error?.message?.includes('tracking protection')) {
+        friendlyError = `
+🛡️ Browser Security Feature Detected
+
+Your browser's tracking protection may be blocking this request. To fix this:
+
+**For Brave Browser:**
+1. Click the 🛡️ Brave shield icon in the address bar
+2. Turn off "Block trackers & ads" for this site
+3. Refresh the page and try again
+
+**Alternative:** Try using Chrome, Firefox, or Safari for the best experience.
+
+Original error: ${friendlyError}
+        `.trim()
+      }
+      
       throw new Error(friendlyError)
     }
   }
