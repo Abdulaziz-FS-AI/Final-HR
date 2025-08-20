@@ -52,12 +52,13 @@ export class PDFExtractionService {
         .from('file_uploads')
         .insert({
           session_id: sessionId,
-          file_name: file.name,
-          file_path: `resumes/${userId}/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${extractionId}.pdf`,
+          original_name: file.name,
+          stored_name: `${extractionId}.pdf`,
+          storage_path: `resumes/${userId}/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${extractionId}.pdf`,
           file_size: file.size,
-          file_type: file.type,
-          user_id: userId,
-          status: 'processing'
+          mime_type: file.type,
+          file_code: extractionId,
+          processing_status: 'processing'
         })
         .select()
         .single()
@@ -71,7 +72,7 @@ export class PDFExtractionService {
       await supabase
         .from('file_uploads')
         .update({
-          status: 'completed'
+          processing_status: 'uploaded'
         })
         .eq('id', fileRecord.id)
       
@@ -92,14 +93,29 @@ export class PDFExtractionService {
       await supabase
         .from('file_uploads')
         .update({
-          status: 'completed',
+          processing_status: 'completed',
           extracted_text: extractedData.text,
-          error_details: qualityCheck.issues.length > 0 ? { 
-            issues: qualityCheck.issues,
-            confidence: qualityCheck.confidence,
+          extracted_metadata: {
             method: extractedData.method,
-            duration: Date.now() - startTime
-          } : null
+            wordCount: extractedData.wordCount,
+            duration: Date.now() - startTime,
+            qualityCheck
+          },
+          extraction_confidence: qualityCheck.confidence,
+          extraction_duration_ms: Date.now() - startTime,
+          extraction_method: extractedData.method,
+          word_count: extractedData.wordCount,
+          character_count: extractedData.text.length,
+          has_contact_info: qualityCheck.hasContact,
+          has_experience: qualityCheck.hasExperience,
+          has_education: qualityCheck.hasEducation,
+          has_skills: qualityCheck.hasSkills,
+          looks_like_resume: qualityCheck.looksLikeResume,
+          extracted_email: qualityCheck.email,
+          extracted_phone: qualityCheck.phone,
+          extracted_name: qualityCheck.name,
+          quality_score: qualityCheck.score,
+          quality_issues: qualityCheck.issues.length > 0 ? qualityCheck.issues : null
         })
         .eq('id', fileRecord.id)
       
@@ -285,10 +301,9 @@ export class PDFExtractionService {
     const { data, error } = await supabase
       .from('file_uploads')
       .select('*')
-      .eq('user_id', userId)
-      .eq('status', 'completed')
+      .eq('processing_status', 'completed')
       .not('extracted_text', 'is', null)
-      .order('created_at', { ascending: false })
+      .order('uploaded_at', { ascending: false })
       .limit(50) // Check recent uploads
     
     if (error || !data) return null
@@ -311,13 +326,15 @@ export class PDFExtractionService {
       .from('file_uploads')
       .insert({
         session_id: sessionId,
-        file_name: existing.file_name,
-        file_path: existing.file_path,
+        original_name: existing.original_name,
+        stored_name: existing.stored_name,
+        storage_path: existing.storage_path,
         file_size: existing.file_size,
-        file_type: existing.file_type,
-        user_id: existing.user_id,
-        status: 'completed',
-        extracted_text: existing.extracted_text
+        mime_type: existing.mime_type,
+        processing_status: 'completed',
+        extracted_text: existing.extracted_text,
+        is_duplicate: true,
+        duplicate_of: existing.id
       })
       .select()
       .single()
@@ -357,7 +374,8 @@ export class PDFExtractionService {
       .from('processing_queue')
       .insert({
         file_id: fileId,
-        priority: priority.toString(),
+        item_type: 'evaluation',
+        priority: priority,
         status: 'pending'
       })
   }

@@ -67,7 +67,7 @@ export class AIEvaluationService {
         .from('file_uploads')
         .select('*')
         .eq('session_id', sessionId)
-        .eq('status', 'completed')
+        .eq('processing_status', 'completed')
         .not('extracted_text', 'is', null)
 
       if (error) throw error
@@ -424,20 +424,22 @@ Respond with ONLY the JSON object, no additional text.`
         .insert({
           file_id: request.fileId,
           session_id: sessionId,
-          user_id: (await supabase.auth.getUser()).data.user?.id || '',
           candidate_name: evaluation.candidate_name,
+          candidate_email: request.contactInfo?.email || null,
+          candidate_phone: request.contactInfo?.phone || null,
           overall_score: evaluation.overall_score,
           bonus_points: evaluation.bonus_points,
           penalty_points: evaluation.penalty_points,
           skills_score: evaluation.skills_score,
           questions_score: evaluation.questions_score,
-          ai_confidence: evaluation.ai_confidence / 100, // Convert to decimal
+          ai_confidence: evaluation.ai_confidence,
           ai_model_used: 'openai/gpt-oss-120b',
-          status: 'QUALIFIED', // Based on score threshold
-          match_level: evaluation.overall_score >= 90 ? 'PERFECT' : 
-                      evaluation.overall_score >= 80 ? 'STRONG' : 
-                      evaluation.overall_score >= 70 ? 'GOOD' : 
-                      evaluation.overall_score >= 60 ? 'FAIR' : 'POOR',
+          status: evaluation.overall_score >= 60 ? 'qualified' : 'rejected',
+          match_level: evaluation.overall_score >= 90 ? 'excellent' : 
+                      evaluation.overall_score >= 80 ? 'strong' : 
+                      evaluation.overall_score >= 70 ? 'good' : 
+                      evaluation.overall_score >= 60 ? 'fair' : 'poor',
+          evaluated_at: new Date().toISOString(),
           table_view: {
             candidate_name: evaluation.candidate_name,
             overall_score: evaluation.overall_score,
