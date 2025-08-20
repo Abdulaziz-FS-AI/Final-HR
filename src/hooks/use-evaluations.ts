@@ -22,7 +22,7 @@ export function useEvaluations(roleId?: string, sessionId?: string) {
         .select(`
           *,
           file:file_uploads(*),
-          role:roles(*)
+          session:evaluation_sessions(*, role:roles(*))
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -54,7 +54,7 @@ export function useEvaluations(roleId?: string, sessionId?: string) {
         .select(`
           *,
           file:file_uploads(*),
-          role:roles(*)
+          session:evaluation_sessions(*, role:roles(*))
         `)
         .eq('id', evaluationId)
         .eq('user_id', user?.id || '')

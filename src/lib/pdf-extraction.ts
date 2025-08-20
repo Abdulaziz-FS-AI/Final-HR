@@ -52,13 +52,16 @@ export class PDFExtractionService {
         .from('file_uploads')
         .insert({
           session_id: sessionId,
+          user_id: userId,
           original_name: file.name,
           stored_name: `${extractionId}.pdf`,
           storage_path: `resumes/${userId}/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${extractionId}.pdf`,
           file_size: file.size,
           mime_type: file.type,
           file_code: extractionId,
-          processing_status: 'processing'
+          processing_status: 'processing',
+          upload_status: 'uploading',
+          uploaded_at: new Date().toISOString()
         })
         .select()
         .single()
@@ -72,7 +75,9 @@ export class PDFExtractionService {
       await supabase
         .from('file_uploads')
         .update({
-          processing_status: 'uploaded'
+          processing_status: 'processing',
+          upload_status: 'uploaded',
+          storage_url: pdfUrl
         })
         .eq('id', fileRecord.id)
       
@@ -120,7 +125,7 @@ export class PDFExtractionService {
         .eq('id', fileRecord.id)
       
       // Step 11: Queue for AI evaluation
-      await this.queueForEvaluation(fileRecord.id, priority)
+      await this.queueForEvaluation(fileRecord.id, sessionId, priority)
       
       // Step 12: Trigger queue processing (async, don't wait)
       this.triggerQueueProcessing().catch(error => {
@@ -301,6 +306,7 @@ export class PDFExtractionService {
     const { data, error } = await supabase
       .from('file_uploads')
       .select('*')
+      .eq('user_id', userId)
       .eq('processing_status', 'completed')
       .not('extracted_text', 'is', null)
       .order('uploaded_at', { ascending: false })
@@ -368,15 +374,18 @@ export class PDFExtractionService {
    */
   private async queueForEvaluation(
     fileId: string,
+    sessionId: string,
     priority: number
   ): Promise<void> {
     await supabase
       .from('processing_queue')
       .insert({
         file_id: fileId,
+        session_id: sessionId,
         item_type: 'evaluation',
         priority: priority,
-        status: 'pending'
+        status: 'pending',
+        created_at: new Date().toISOString()
       })
   }
 

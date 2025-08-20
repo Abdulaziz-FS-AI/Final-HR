@@ -418,12 +418,24 @@ Respond with ONLY the JSON object, no additional text.`
       // First create or get evaluation session
       const sessionId = await this.getOrCreateEvaluationSession(request.roleId)
 
+      // Get user_id and role_id for the evaluation
+      const userId = (await supabase.auth.getUser()).data.user?.id
+      
+      // Get role_id from session
+      const { data: sessionData } = await supabase
+        .from('evaluation_sessions')
+        .select('role_id')
+        .eq('id', sessionId)
+        .single()
+
       // Save the evaluation result
       const { error } = await supabase
         .from('evaluation_results')
         .insert({
           file_id: request.fileId,
           session_id: sessionId,
+          user_id: userId,
+          role_id: sessionData?.role_id,
           candidate_name: evaluation.candidate_name,
           candidate_email: request.contactInfo?.email || null,
           candidate_phone: request.contactInfo?.phone || null,
@@ -432,14 +444,15 @@ Respond with ONLY the JSON object, no additional text.`
           penalty_points: evaluation.penalty_points,
           skills_score: evaluation.skills_score,
           questions_score: evaluation.questions_score,
-          ai_confidence: evaluation.ai_confidence,
+          ai_confidence: Math.min(100, Math.max(0, evaluation.ai_confidence)), // Ensure 0-100 range
           ai_model_used: 'openai/gpt-oss-120b',
-          status: evaluation.overall_score >= 60 ? 'qualified' : 'rejected',
-          match_level: evaluation.overall_score >= 90 ? 'excellent' : 
-                      evaluation.overall_score >= 80 ? 'strong' : 
-                      evaluation.overall_score >= 70 ? 'good' : 
-                      evaluation.overall_score >= 60 ? 'fair' : 'poor',
+          status: evaluation.overall_score >= 60 ? 'QUALIFIED' : 'REJECTED', // Use uppercase
+          match_level: evaluation.overall_score >= 90 ? 'PERFECT' : 
+                      evaluation.overall_score >= 80 ? 'STRONG' : 
+                      evaluation.overall_score >= 70 ? 'GOOD' : 
+                      evaluation.overall_score >= 60 ? 'FAIR' : 'POOR', // Use uppercase
           evaluated_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
           table_view: {
             candidate_name: evaluation.candidate_name,
             overall_score: evaluation.overall_score,
@@ -465,13 +478,27 @@ Respond with ONLY the JSON object, no additional text.`
 
       if (error) {
         console.error('Failed to save evaluation results:', error)
+        
+        // Update failed count in session
+        await supabase.rpc('increment_failed_resumes', { 
+          session_id: sessionId 
+        }).catch(console.error)
+        
         throw error
       }
+
+      // Update successful evaluation count in session
+      await supabase.rpc('increment_processed_resumes', { 
+        session_id: sessionId 
+      }).catch(console.error)
 
       // Update processing queue status
       await supabase
         .from('processing_queue')
-        .update({ status: 'completed' })
+        .update({ 
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        })
         .eq('file_id', request.fileId)
 
     } catch (error) {
@@ -490,13 +517,15 @@ Respond with ONLY the JSON object, no additional text.`
       throw new Error('User not authenticated')
     }
 
-    // Try to find existing active session
+    // Try to find existing active session (pending or processing)
     const { data: existingSession } = await supabase
       .from('evaluation_sessions')
       .select('id')
       .eq('role_id', roleId)
       .eq('user_id', userId)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'processing'])
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single()
 
     if (existingSession) {
@@ -577,15 +606,16 @@ Respond with ONLY the JSON object, no additional text.`
    */
   async processQueue(): Promise<void> {
     try {
-      // Get pending items from queue
+      // Get pending items from queue with session info
       const { data: queueItems, error } = await supabase
         .from('processing_queue')
         .select(`
           *,
-          file:file_uploads!inner(*)
+          file:file_uploads!inner(*),
+          session:evaluation_sessions(*)
         `)
         .eq('status', 'pending')
-        .order('priority', { ascending: true })
+        .order('priority', { ascending: false }) // Higher priority first
         .order('created_at', { ascending: true })
         .limit(10)
 
@@ -628,16 +658,32 @@ Respond with ONLY the JSON object, no additional text.`
       throw new Error('No extracted text available for evaluation')
     }
 
+    // Use session from queue item or fallback to file's session
+    const sessionId = item.session_id || file.session_id
+    
+    if (!sessionId) {
+      throw new Error('No session ID found for queue item')
+    }
+
     // Get evaluation session to determine role
     const { data: evaluationSession, error: sessionError } = await supabase
       .from('evaluation_sessions')
       .select('role_id')
-      .eq('id', file.session_id)
+      .eq('id', sessionId)
       .single()
 
     if (sessionError || !evaluationSession) {
       throw new Error('Could not determine role for evaluation')
     }
+
+    // Mark queue item as processing
+    await supabase
+      .from('processing_queue')
+      .update({ 
+        status: 'processing',
+        started_at: new Date().toISOString()
+      })
+      .eq('id', item.id)
 
     // Extract contact info
     const contactInfo = this.extractContactInfo(file.extracted_text)
