@@ -84,18 +84,10 @@ export async function POST(request: NextRequest) {
           count: batchResults.length
         })
 
-      case 'queue':
-        // Process evaluation queue
-        await evaluationService.processQueue()
-
-        return NextResponse.json({
-          success: true,
-          message: 'Queue processing completed'
-        })
 
       default:
         return NextResponse.json(
-          { error: 'Invalid evaluation type. Use: single, batch, or queue' },
+          { error: 'Invalid evaluation type. Use: single or batch' },
           { status: 400 }
         )
     }
@@ -118,27 +110,10 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const url = new URL(request.url)
-    const action = url.searchParams.get('action')
-
-    const evaluationService = new AIEvaluationService()
-
-    switch (action) {
-      case 'process-queue':
-        // Trigger queue processing
-        await evaluationService.processQueue()
-        
-        return NextResponse.json({
-          success: true,
-          message: 'Queue processing initiated'
-        })
-
-      default:
-        return NextResponse.json(
-          { error: 'Invalid action parameter' },
-          { status: 400 }
-        )
-    }
+    return NextResponse.json(
+      { error: 'GET endpoint not supported' },
+      { status: 405 }
+    )
 
   } catch (error: any) {
     console.error('Evaluation API GET error:', error)

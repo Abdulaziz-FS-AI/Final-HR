@@ -449,7 +449,6 @@ Respond with ONLY the JSON object, no additional text.`
                       evaluation.overall_score >= 80 ? 'STRONG' : 
                       evaluation.overall_score >= 70 ? 'GOOD' : 
                       evaluation.overall_score >= 60 ? 'FAIR' : 'POOR',
-          evaluated_at: new Date().toISOString(),
           table_view: {
             candidate_name: evaluation.candidate_name,
             overall_score: evaluation.overall_score,
@@ -478,15 +477,6 @@ Respond with ONLY the JSON object, no additional text.`
         throw error
       }
 
-      // Update processing queue status
-      await supabase
-        .from('processing_queue')
-        .update({ 
-          status: 'completed',
-          completed_at: new Date().toISOString()
-        })
-        .eq('file_id', request.fileId)
-
     } catch (error) {
       console.error('Error saving evaluation results:', error)
       throw error
@@ -508,102 +498,4 @@ Respond with ONLY the JSON object, no additional text.`
     }
   }
 
-  /**
-   * Process the evaluation queue
-   */
-  async processQueue(): Promise<void> {
-    try {
-      const supabase = createAdminClient()
-      
-      // Get pending items from queue with session info
-      const { data: queueItems, error } = await supabase
-        .from('processing_queue')
-        .select(`
-          *,
-          file:file_uploads!inner(*),
-          session:evaluation_sessions(*)
-        `)
-        .eq('status', 'pending')
-        .order('priority', { ascending: false }) // Higher priority first
-        .order('created_at', { ascending: true })
-        .limit(10)
-
-      if (error) {
-        console.error('Error fetching queue items:', error)
-        return
-      }
-
-      // Process each item
-      for (const item of queueItems || []) {
-        try {
-          await this.processQueueItem(item)
-        } catch (error) {
-          console.error(`Failed to process queue item ${item.id}:`, error)
-          
-          // Update queue item with error
-          await supabase
-            .from('processing_queue')
-            .update({
-              status: 'failed',
-              error_details: { error: error instanceof Error ? error.message : 'Unknown error' },
-              attempts: (item.attempts || 0) + 1
-            })
-            .eq('id', item.id)
-        }
-      }
-
-    } catch (error) {
-      console.error('Queue processing failed:', error)
-    }
-  }
-
-  /**
-   * Process individual queue item
-   */
-  private async processQueueItem(item: any): Promise<void> {
-    const supabase = createAdminClient()
-    const file = item.file
-    
-    if (!file?.extracted_text) {
-      throw new Error('No extracted text available for evaluation')
-    }
-
-    // Use session from queue item or fallback to file's session
-    const sessionId = item.session_id || file.session_id
-    
-    if (!sessionId) {
-      throw new Error('No session ID found for queue item')
-    }
-
-    // Get evaluation session to determine role
-    const { data: evaluationSession, error: sessionError } = await supabase
-      .from('evaluation_sessions')
-      .select('role_id')
-      .eq('id', sessionId)
-      .single()
-
-    if (sessionError || !evaluationSession) {
-      throw new Error('Could not determine role for evaluation')
-    }
-
-    // Mark queue item as processing
-    await supabase
-      .from('processing_queue')
-      .update({ 
-        status: 'processing',
-        started_at: new Date().toISOString()
-      })
-      .eq('id', item.id)
-
-    // Extract contact info
-    const contactInfo = this.extractContactInfo(file.extracted_text)
-
-    // Perform evaluation
-    await this.evaluateCandidate({
-      roleId: evaluationSession.role_id,
-      fileId: file.id,
-      resumeText: file.extracted_text,
-      contactInfo
-    })
-  }
 }

@@ -27,7 +27,7 @@ import { useRouter } from 'next/navigation'
 interface UploadFile {
   file: File
   id: string
-  status: 'pending' | 'uploading' | 'processing' | 'completed' | 'error'
+  status: 'pending' | 'completed' | 'failed'
   error?: string
   result?: any
 }
@@ -84,15 +84,6 @@ export function FileUploadForm() {
     }
 
     try {
-      // Update status to uploading
-      setFiles(prev => prev.map(f => 
-        f.id === uploadFile.id ? { ...f, status: 'uploading' } : f
-      ))
-
-      // Start processing
-      setFiles(prev => prev.map(f => 
-        f.id === uploadFile.id ? { ...f, status: 'processing' } : f
-      ))
 
       // Use the fixed PDF extraction API
       const formData = new FormData()
@@ -123,7 +114,6 @@ export function FileUploadForm() {
           extracted_text: extractionResult.text,
           session_id: actualSessionId || sessionId,
           user_id: user.id,
-          processing_status: 'completed',
           uploaded_at: new Date().toISOString(),
           processed_at: new Date().toISOString()
         })
@@ -138,7 +128,6 @@ export function FileUploadForm() {
         extractionId: resume.id,
         text: extractionResult.text,
         confidence: extractionResult.info?.confidence || 0.8,
-        duration: 1000, // placeholder
         issues: extractionResult.info?.extractionFailed ? ['Extraction quality may be low'] : []
       }
 
@@ -159,7 +148,7 @@ export function FileUploadForm() {
       setFiles(prev => prev.map(f => 
         f.id === uploadFile.id ? { 
           ...f, 
-          status: 'error',
+          status: 'failed',
           error: errorMessage
         } : f
       ))
@@ -427,21 +416,13 @@ export function FileUploadForm() {
                       {uploadFile.status === 'pending' && (
                         <span className="text-gray-500 text-sm">Ready</span>
                       )}
-                      {(uploadFile.status === 'uploading' || uploadFile.status === 'processing') && (
-                        <>
-                          <Loader className="h-4 w-4 animate-spin text-blue-600" />
-                          <span className="text-blue-600 text-sm capitalize">
-                            {uploadFile.status}
-                          </span>
-                        </>
-                      )}
                       {uploadFile.status === 'completed' && (
                         <>
                           <CheckCircle className="h-4 w-4 text-green-600" />
                           <span className="text-green-600 text-sm">Completed</span>
                         </>
                       )}
-                      {uploadFile.status === 'error' && (
+                      {uploadFile.status === 'failed' && (
                         <>
                           <AlertCircle className="h-4 w-4 text-red-600" />
                           <span className="text-red-600 text-sm">Failed</span>
@@ -454,7 +435,7 @@ export function FileUploadForm() {
                       variant="ghost"
                       size="sm"
                       onClick={() => removeFile(uploadFile.id)}
-                      disabled={uploadFile.status === 'uploading' || uploadFile.status === 'processing'}
+                      disabled={false}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -466,18 +447,12 @@ export function FileUploadForm() {
             {/* Processing Summary */}
             {files.length > 0 && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                <div className="grid grid-cols-4 gap-4 text-center">
+                <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
                     <p className="text-2xl font-bold text-gray-600">
                       {files.filter(f => f.status === 'pending').length}
                     </p>
                     <p className="text-sm text-gray-500">Pending</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-blue-600">
-                      {files.filter(f => f.status === 'uploading' || f.status === 'processing').length}
-                    </p>
-                    <p className="text-sm text-gray-500">Processing</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-green-600">
@@ -487,7 +462,7 @@ export function FileUploadForm() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-red-600">
-                      {files.filter(f => f.status === 'error').length}
+                      {files.filter(f => f.status === 'failed').length}
                     </p>
                     <p className="text-sm text-gray-500">Failed</p>
                   </div>
@@ -515,7 +490,6 @@ export function FileUploadForm() {
                       <div className="text-sm space-y-1">
                         <p><strong>Extraction ID:</strong> {uploadFile.result.extractionId}</p>
                         <p><strong>Confidence:</strong> {Math.round(uploadFile.result.confidence * 100)}%</p>
-                        <p><strong>Processing Time:</strong> {(uploadFile.result.duration / 1000).toFixed(2)}s</p>
                         {uploadFile.result.issues.length > 0 && (
                           <p><strong>Issues:</strong> {uploadFile.result.issues.join(', ')}</p>
                         )}

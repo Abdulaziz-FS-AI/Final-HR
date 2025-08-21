@@ -54,7 +54,6 @@ export type Database = {
         Row: {
           ai_confidence: number | null
           ai_model_used: string | null
-          ai_processing_time_ms: number | null
           ai_tokens_used: number | null
           bonus_points: number | null
           candidate_email: string | null
@@ -85,7 +84,6 @@ export type Database = {
         Insert: {
           ai_confidence?: number | null
           ai_model_used?: string | null
-          ai_processing_time_ms?: number | null
           ai_tokens_used?: number | null
           bonus_points?: number | null
           candidate_email?: string | null
@@ -116,7 +114,6 @@ export type Database = {
         Update: {
           ai_confidence?: number | null
           ai_model_used?: string | null
-          ai_processing_time_ms?: number | null
           ai_tokens_used?: number | null
           bonus_points?: number | null
           candidate_email?: string | null
@@ -257,7 +254,6 @@ export type Database = {
           extracted_phone: string | null
           extracted_text: string | null
           extraction_confidence: number | null
-          extraction_duration_ms: number | null
           extraction_method: string | null
           failure_code: string | null
           failure_reason: string | null
@@ -278,9 +274,6 @@ export type Database = {
           original_name: string
           page_count: number | null
           processed_at: string | null
-          processing_history: Json | null
-          processing_stage: string | null
-          processing_status: string | null
           quality_issues: Json | null
           quality_score: number | null
           re_evaluation_count: number | null
@@ -311,7 +304,6 @@ export type Database = {
           extracted_phone?: string | null
           extracted_text?: string | null
           extraction_confidence?: number | null
-          extraction_duration_ms?: number | null
           extraction_method?: string | null
           failure_code?: string | null
           failure_reason?: string | null
@@ -332,9 +324,6 @@ export type Database = {
           original_name: string
           page_count?: number | null
           processed_at?: string | null
-          processing_history?: Json | null
-          processing_stage?: string | null
-          processing_status?: string | null
           quality_issues?: Json | null
           quality_score?: number | null
           re_evaluation_count?: number | null
@@ -365,7 +354,6 @@ export type Database = {
           extracted_phone?: string | null
           extracted_text?: string | null
           extraction_confidence?: number | null
-          extraction_duration_ms?: number | null
           extraction_method?: string | null
           failure_code?: string | null
           failure_reason?: string | null
@@ -386,9 +374,6 @@ export type Database = {
           original_name?: string
           page_count?: number | null
           processed_at?: string | null
-          processing_history?: Json | null
-          processing_stage?: string | null
-          processing_status?: string | null
           quality_issues?: Json | null
           quality_score?: number | null
           re_evaluation_count?: number | null
@@ -432,122 +417,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      processing_queue: {
-        Row: {
-          base_priority: number | null
-          calculated_priority: number | null
-          completed_at: string | null
-          created_at: string | null
-          file_id: string | null
-          id: string
-          is_retry: boolean | null
-          item_type: string
-          last_error: string | null
-          lock_acquired_at: string | null
-          lock_expires_at: string | null
-          max_retries: number | null
-          original_queue_item_id: string | null
-          priority: number | null
-          processing_lock_id: string | null
-          processor_id: string | null
-          request_reason: string | null
-          requested_by: string | null
-          retry_bonus: number | null
-          retry_count: number | null
-          retry_stage: string | null
-          session_id: string | null
-          started_at: string | null
-          status: string | null
-          user_request_bonus: number | null
-          user_requested: boolean | null
-        }
-        Insert: {
-          base_priority?: number | null
-          calculated_priority?: number | null
-          completed_at?: string | null
-          created_at?: string | null
-          file_id?: string | null
-          id?: string
-          is_retry?: boolean | null
-          item_type: string
-          last_error?: string | null
-          lock_acquired_at?: string | null
-          lock_expires_at?: string | null
-          max_retries?: number | null
-          original_queue_item_id?: string | null
-          priority?: number | null
-          processing_lock_id?: string | null
-          processor_id?: string | null
-          request_reason?: string | null
-          requested_by?: string | null
-          retry_bonus?: number | null
-          retry_count?: number | null
-          retry_stage?: string | null
-          session_id?: string | null
-          started_at?: string | null
-          status?: string | null
-          user_request_bonus?: number | null
-          user_requested?: boolean | null
-        }
-        Update: {
-          base_priority?: number | null
-          calculated_priority?: number | null
-          completed_at?: string | null
-          created_at?: string | null
-          file_id?: string | null
-          id?: string
-          is_retry?: boolean | null
-          item_type?: string
-          last_error?: string | null
-          lock_acquired_at?: string | null
-          lock_expires_at?: string | null
-          max_retries?: number | null
-          original_queue_item_id?: string | null
-          priority?: number | null
-          processing_lock_id?: string | null
-          processor_id?: string | null
-          request_reason?: string | null
-          requested_by?: string | null
-          retry_bonus?: number | null
-          retry_count?: number | null
-          retry_stage?: string | null
-          session_id?: string | null
-          started_at?: string | null
-          status?: string | null
-          user_request_bonus?: number | null
-          user_requested?: boolean | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "processing_queue_file_id_fkey"
-            columns: ["file_id"]
-            isOneToOne: false
-            referencedRelation: "file_uploads"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "processing_queue_original_queue_item_id_fkey"
-            columns: ["original_queue_item_id"]
-            isOneToOne: false
-            referencedRelation: "processing_queue"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "processing_queue_requested_by_fkey"
-            columns: ["requested_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "processing_queue_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "evaluation_sessions"
             referencedColumns: ["id"]
           },
         ]
