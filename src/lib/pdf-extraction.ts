@@ -194,41 +194,9 @@ export class PDFExtractionService {
    * Fallback extraction method
    */
   private async extractViaFallback(file: File): Promise<string> {
-    // Generate a sample resume text for testing
-    // In production, this should never be reached
-    console.warn('Using fallback text extraction - PDF parsing failed')
-    
-    return `[FALLBACK EXTRACTION - ${file.name}]
-    
-John Doe
-Email: john.doe@example.com
-Phone: +1-555-123-4567
-
-PROFESSIONAL SUMMARY
-Experienced software engineer with 5+ years of experience in full-stack development.
-
-EXPERIENCE
-Senior Software Engineer - Tech Corp (2020-Present)
-- Led development of microservices architecture
-- Implemented CI/CD pipelines
-- Mentored junior developers
-
-Software Engineer - StartupXYZ (2018-2020)
-- Developed RESTful APIs
-- Worked with React and Node.js
-- Participated in agile development
-
-EDUCATION
-Bachelor of Science in Computer Science
-University of Technology (2014-2018)
-
-SKILLS
-Programming: JavaScript, Python, Java
-Frameworks: React, Node.js, Spring Boot
-Databases: PostgreSQL, MongoDB
-Cloud: AWS, Docker, Kubernetes
-
-[Note: This is fallback text. Actual PDF extraction failed.]`
+    // CRITICAL: Never return the same hardcoded text for different files
+    console.error('PDF extraction failed for file:', file.name)
+    throw new Error(`Unable to extract text from ${file.name}. The PDF may be corrupted, encrypted, or contain only images without OCR.`)
   }
   
   

@@ -147,60 +147,9 @@ async function extractWithSimpleParser(buffer: Buffer) {
 }
 
 async function extractWithFallback(buffer: Buffer) {
-  // Test data for development
-  const text = `Alex Ramirez
-Senior Software Engineer
-Email: alex.ramirez@email.com
-Phone: (555) 123-4567
-
-PROFESSIONAL SUMMARY
-Experienced software engineer with 8+ years developing scalable web applications and cloud services.
-
-EXPERIENCE
-
-Senior Software Engineer - Tech Corp (2020-Present)
-• Led development of microservices architecture serving 1M+ users
-• Implemented CI/CD pipelines reducing deployment time by 60%
-• Mentored team of 5 junior developers
-
-Software Engineer - StartupXYZ (2018-2020)  
-• Developed RESTful APIs using Node.js and Python
-• Built React-based dashboards for data visualization
-• Participated in agile development with 2-week sprints
-
-Junior Developer - WebDev Inc (2016-2018)
-• Created responsive web applications using HTML, CSS, JavaScript
-• Maintained MySQL databases and wrote complex queries
-• Collaborated with design team on UI/UX improvements
-
-EDUCATION
-Bachelor of Science in Computer Science
-State University (2012-2016)
-GPA: 3.8/4.0
-
-SKILLS
-Programming: JavaScript, TypeScript, Python, Java, Go
-Frameworks: React, Node.js, Express, Django, Spring Boot
-Databases: PostgreSQL, MongoDB, Redis, MySQL
-Cloud: AWS (EC2, S3, Lambda), Docker, Kubernetes
-Tools: Git, Jenkins, JIRA, Terraform
-
-CERTIFICATIONS
-• AWS Certified Solutions Architect
-• Google Cloud Professional Developer
-• Certified Kubernetes Administrator (CKA)
-
-PROJECTS
-• E-commerce Platform: Built scalable marketplace handling 10K transactions/day
-• Real-time Analytics Dashboard: Developed data pipeline processing 1TB daily
-• Mobile App Backend: Created API serving 500K mobile users`
-  
-  return {
-    text,
-    pages: 1,
-    method: 'fallback',
-    extractionFailed: true
-  }
+  // CRITICAL: This should NEVER return the same text for different files
+  // If we reach this point, extraction has failed completely
+  throw new Error('PDF extraction failed - all methods exhausted. The PDF may be corrupted, encrypted, or in an unsupported format.')
 }
 
 // **CRITICAL FIX** - Enhanced text validation that catches your artifacts
