@@ -57,7 +57,9 @@ export function AnalyticsDashboard() {
       
       filteredEvaluations = filteredEvaluations.filter(
         evaluation => {
-          const evalDate = new Date(evaluation.created_at || evaluation.evaluated_at)
+          const dateStr = evaluation.created_at || evaluation.evaluated_at
+          if (!dateStr) return false
+          const evalDate = new Date(dateStr)
           return evalDate >= cutoffDate
         }
       )

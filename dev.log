@@ -2,98 +2,67 @@
 > hr-ai-saas@0.1.0 dev
 > next dev
 
+ ⚠ Port 3000 is in use, trying 3001 instead.
    ▲ Next.js 14.1.0
-   - Local:        http://localhost:3000
+   - Local:        http://localhost:3001
    - Environments: .env.local
 
-<w> [webpack.cache.PackFileCacheStrategy] Restoring pack failed from /Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/.next/cache/webpack/client-development.pack.gz: Error: incorrect header check
- ✓ Ready in 1958ms
- ✓ Compiled /api/test-batch in 247ms (45 modules)
-Starting batch evaluation test
-Creating AIEvaluationService...
-Calling evaluateBatch...
-Batch evaluation failed: TypeError: (0 , _lib_supabase__WEBPACK_IMPORTED_MODULE_0__.createAdminClient) is not a function
-    at AIEvaluationService.evaluateBatch (webpack-internal:///(rsc)/./src/lib/ai-evaluation.ts:53:94)
-    at POST (webpack-internal:///(rsc)/./src/app/api/test-batch/route.ts:23:48)
-    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async /Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:63809
-    at async eU.execute (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:53964)
-    at async eU.handle (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:65062)
-    at async doRender (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1333:42)
-    at async cacheEntry.responseCache.get.routeKind (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1555:28)
-    at async DevServer.renderToResponseWithComponentsImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1463:28)
-    at async DevServer.renderPageComponent (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1856:24)
-    at async DevServer.renderToResponseImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1894:32)
-    at async DevServer.pipeImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:911:25)
-    at async NextNodeServer.handleCatchallRenderRequest (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/next-server.js:271:17)
-    at async DevServer.handleRequestImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:807:17)
-    at async /Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/dev/next-dev-server.js:331:20
-    at async Span.traceAsyncFn (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/trace/trace.js:151:20)
-    at async DevServer.handleRequest (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/dev/next-dev-server.js:328:24)
-    at async invokeRender (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:163:21)
-    at async handleRequest (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:342:24)
-    at async requestHandlerImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:366:13)
-    at async Server.requestListener (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/start-server.js:140:13)
-Test batch evaluation error: Error: Batch evaluation failed: (0 , _lib_supabase__WEBPACK_IMPORTED_MODULE_0__.createAdminClient) is not a function
-    at AIEvaluationService.evaluateBatch (webpack-internal:///(rsc)/./src/lib/ai-evaluation.ts:75:19)
-    at POST (webpack-internal:///(rsc)/./src/app/api/test-batch/route.ts:23:48)
-    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async /Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:63809
-    at async eU.execute (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:53964)
-    at async eU.handle (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:65062)
-    at async doRender (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1333:42)
-    at async cacheEntry.responseCache.get.routeKind (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1555:28)
-    at async DevServer.renderToResponseWithComponentsImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1463:28)
-    at async DevServer.renderPageComponent (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1856:24)
-    at async DevServer.renderToResponseImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1894:32)
-    at async DevServer.pipeImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:911:25)
-    at async NextNodeServer.handleCatchallRenderRequest (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/next-server.js:271:17)
-    at async DevServer.handleRequestImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:807:17)
-    at async /Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/dev/next-dev-server.js:331:20
-    at async Span.traceAsyncFn (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/trace/trace.js:151:20)
-    at async DevServer.handleRequest (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/dev/next-dev-server.js:328:24)
-    at async invokeRender (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:163:21)
-    at async handleRequest (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:342:24)
-    at async requestHandlerImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:366:13)
-    at async Server.requestListener (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/start-server.js:140:13)
-Error stack: Error: Batch evaluation failed: (0 , _lib_supabase__WEBPACK_IMPORTED_MODULE_0__.createAdminClient) is not a function
-    at AIEvaluationService.evaluateBatch (webpack-internal:///(rsc)/./src/lib/ai-evaluation.ts:75:19)
-    at POST (webpack-internal:///(rsc)/./src/app/api/test-batch/route.ts:23:48)
-    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async /Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:63809
-    at async eU.execute (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:53964)
-    at async eU.handle (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:65062)
-    at async doRender (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1333:42)
-    at async cacheEntry.responseCache.get.routeKind (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1555:28)
-    at async DevServer.renderToResponseWithComponentsImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1463:28)
-    at async DevServer.renderPageComponent (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1856:24)
-    at async DevServer.renderToResponseImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1894:32)
-    at async DevServer.pipeImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:911:25)
-    at async NextNodeServer.handleCatchallRenderRequest (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/next-server.js:271:17)
-    at async DevServer.handleRequestImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:807:17)
-    at async /Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/dev/next-dev-server.js:331:20
-    at async Span.traceAsyncFn (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/trace/trace.js:151:20)
-    at async DevServer.handleRequest (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/dev/next-dev-server.js:328:24)
-    at async invokeRender (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:163:21)
-    at async handleRequest (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:342:24)
-    at async requestHandlerImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:366:13)
-    at async Server.requestListener (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/start-server.js:140:13)
-Error name: Error
-Error message: Batch evaluation failed: (0 , _lib_supabase__WEBPACK_IMPORTED_MODULE_0__.createAdminClient) is not a function
- ✓ Compiled in 459ms (114 modules)
-Starting batch evaluation test
-Creating AIEvaluationService...
-Calling evaluateBatch...
-Batch evaluation failed: {
-  code: '22P02',
-  details: null,
-  hint: null,
-  message: 'invalid input syntax for type uuid: "test-session"'
+ ✓ Ready in 1725ms
+ ○ Compiling /api/evaluate ...
+ ✓ Compiled /api/evaluate in 601ms (114 modules)
+AI API call failed: TypeError: Failed to parse URL from /api/ai-evaluate
+    at node:internal/deps/undici/undici:13510:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) { ✓ Compiled in 695ms (442 modules)
+ ✓ Compiled in 345ms (442 modules)
+ ✓ Compiled in 255ms (442 modules)
+[?25h
+s/undici/undici:9586:25)
+      at fetch (node:internal/deps/undici/undici:10315:25)
+      at fetch (node:internal/deps/undici/undici:13508:10)
+      at fetch (node:internal/bootstrap/web/exposed-window-or-worker:75:12)
+      at M (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:61456)
+      at /Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:63607
+      at /Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/trace/tracer.js:133:36
+      at NoopContextManager.with (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:7062)
+      at ContextAPI.with (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:518)
+      at NoopTracer.startActiveSpan (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18093)
+      at ProxyTracer.startActiveSpan (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18854)
+      at /Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/trace/tracer.js:122:103
+      at NoopContextManager.with (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:7062)
+      at ContextAPI.with (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:518)
+      at NextTracerImpl.trace (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/trace/tracer.js:122:28)
+      at globalThis.fetch (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:57593)
+      at AIEvaluationService.callHyperbolicAPI (webpack-internal:///(rsc)/./src/lib/ai-evaluation.ts:82:36)
+      at AIEvaluationService.evaluateCandidate (webpack-internal:///(rsc)/./src/lib/ai-evaluation.ts:27:43)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async POST (webpack-internal:///(rsc)/./src/app/api/evaluate/route.ts:52:32)
+      at async /Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:63809
+      at async eU.execute (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:53964)
+      at async eU.handle (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:65062)
+      at async doRender (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1333:42)
+      at async cacheEntry.responseCache.get.routeKind (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1555:28)
+      at async DevServer.renderToResponseWithComponentsImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1463:28)
+      at async DevServer.renderPageComponent (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1856:24)
+      at async DevServer.renderToResponseImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1894:32)
+      at async DevServer.pipeImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:911:25)
+      at async NextNodeServer.handleCatchallRenderRequest (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/next-server.js:271:17)
+      at async DevServer.handleRequestImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:807:17)
+      at async /Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/dev/next-dev-server.js:331:20
+      at async Span.traceAsyncFn (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/trace/trace.js:151:20)
+      at async DevServer.handleRequest (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/dev/next-dev-server.js:328:24)
+      at async invokeRender (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:163:21)
+      at async handleRequest (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:342:24)
+      at async requestHandlerImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:366:13)
+      at async Server.requestListener (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/start-server.js:140:13) {
+    code: 'ERR_INVALID_URL',
+    input: '/api/ai-evaluate'
+  }
 }
-Test batch evaluation error: Error: Batch evaluation failed: invalid input syntax for type uuid: "test-session"
-    at AIEvaluationService.evaluateBatch (webpack-internal:///(rsc)/./src/lib/ai-evaluation.ts:75:19)
+API Error: Error: AI evaluation failed: Failed to parse URL from /api/ai-evaluate
+    at AIEvaluationService.callHyperbolicAPI (webpack-internal:///(rsc)/./src/lib/ai-evaluation.ts:101:19)
     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async POST (webpack-internal:///(rsc)/./src/app/api/test-batch/route.ts:23:24)
+    at async AIEvaluationService.evaluateCandidate (webpack-internal:///(rsc)/./src/lib/ai-evaluation.ts:27:32)
+    at async POST (webpack-internal:///(rsc)/./src/app/api/evaluate/route.ts:52:32)
     at async /Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:63809
     at async eU.execute (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:53964)
     at async eU.handle (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:65062)
@@ -112,10 +81,36 @@ Test batch evaluation error: Error: Batch evaluation failed: invalid input synta
     at async handleRequest (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:342:24)
     at async requestHandlerImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:366:13)
     at async Server.requestListener (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/start-server.js:140:13)
-Error stack: Error: Batch evaluation failed: invalid input syntax for type uuid: "test-session"
-    at AIEvaluationService.evaluateBatch (webpack-internal:///(rsc)/./src/lib/ai-evaluation.ts:75:19)
+Error logged: {
+  code: 'AI_EVALUATION_FAILED',
+  message: 'AI evaluation failed: Failed to parse URL from /api/ai-evaluate',
+  details: undefined,
+  timestamp: '2025-08-21T13:07:42.271Z',
+  context: {
+    component: 'AIEvaluationService',
+    action: 'evaluateCandidate',
+    metadata: {
+      roleId: 'addba411-0b15-42b8-bd0a-857002e8bcb6',
+      fileId: '654a852e-22ec-416f-ba5c-d826b676f8d5'
+    }
+  },
+  userAgent: 'server',
+  url: 'server'
+}
+Evaluation API error: {
+  code: 'AI_EVALUATION_FAILED',
+  message: 'AI evaluation failed: Failed to parse URL from /api/ai-evaluate',
+  details: undefined,
+  timestamp: '2025-08-21T13:07:42.271Z'
+}
+Error stack: undefined
+ ✓ Compiled in 253ms (114 modules)
+Failed to parse AI response: SyntaxError: Unexpected token '<', "<think>We "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at AIEvaluationService.parseAIResponse (webpack-internal:///(rsc)/./src/lib/ai-evaluation.ts:319:33)
+    at AIEvaluationService.evaluateCandidate (webpack-internal:///(rsc)/./src/lib/ai-evaluation.ts:29:37)
     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async POST (webpack-internal:///(rsc)/./src/app/api/test-batch/route.ts:23:24)
+    at async POST (webpack-internal:///(rsc)/./src/app/api/evaluate/route.ts:52:32)
     at async /Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:63809
     at async eU.execute (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:53964)
     at async eU.handle (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:65062)
@@ -134,8 +129,79 @@ Error stack: Error: Batch evaluation failed: invalid input syntax for type uuid:
     at async handleRequest (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:342:24)
     at async requestHandlerImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:366:13)
     at async Server.requestListener (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/start-server.js:140:13)
-Error name: Error
-Error message: Batch evaluation failed: invalid input syntax for type uuid: "test-session"
- ✓ Compiled in 5ms
- ✓ Compiled in 906ms (190 modules)
+ ✓ Compiled in 315ms (114 modules)
+ ✓ Compiled in 25ms
+ ✓ Compiled /api/evaluate in 80ms (114 modules)
+Parsing AI response JSON: {
+  "candidate_name": "Alex Ramirez",
+  "overall_score": 0,
+  "base_score": 0,
+  "skills_score": 0,
+  "questions_score": 0,
+  "bonus_points": 0,
+  "penalty_points": -10,
+  "bonus_breakdown": {
+    "education_bonus": 0,
+    "company_bonus": 0,
+    "projects_bonus": 0,
+    "certifications_bonus": 0
+  },
+  "penalty_breakdown": {
+    "job_stability_penalty": 0,
+    "employment_gap_penalty": -10
+  },
+  "skills_analysis": [
+    {
+      "skill_name": "Network Engineering",
+      "found": false,
+      "...
+Parsing AI response JSON: {
+  "candidate_name": "",
+  "overall_score": 0,
+  "base_score": 0,
+  "skills_score": 0,
+  "questions_score": 0,
+  "bonus_points": 0,
+  "penalty_points": 0,
+  "bonus_breakdown": {
+    "education_bonus": 0,
+    "company_bonus": 0,
+    "projects_bonus": 0,
+    "certifications_bonus": 0
+  },
+  "penalty_breakdown": {
+    "job_stability_penalty": 0,
+    "employment_gap_penalty": 0
+  },
+  "skills_analysis": [
+    {
+      "skill_name": "Network Engineering",
+      "found": false,
+      "level": "NONE",
+...
+Failed to parse AI response: SyntaxError: Expected ':' after property name in JSON at position 614 (line 29 column 17)
+    at JSON.parse (<anonymous>)
+    at AIEvaluationService.parseAIResponse (webpack-internal:///(rsc)/./src/lib/ai-evaluation.ts:333:33)
+    at AIEvaluationService.evaluateCandidate (webpack-internal:///(rsc)/./src/lib/ai-evaluation.ts:29:37)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async AIEvaluationService.evaluateBatch (webpack-internal:///(rsc)/./src/lib/ai-evaluation.ts:60:40)
+    at async POST (webpack-internal:///(rsc)/./src/app/api/evaluate/route.ts:72:38)
+    at async /Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:63809
+    at async eU.execute (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:53964)
+    at async eU.handle (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:65062)
+    at async doRender (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1333:42)
+    at async cacheEntry.responseCache.get.routeKind (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1555:28)
+    at async DevServer.renderToResponseWithComponentsImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1463:28)
+    at async DevServer.renderPageComponent (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1856:24)
+    at async DevServer.renderToResponseImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:1894:32)
+    at async DevServer.pipeImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:911:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/next-server.js:271:17)
+    at async DevServer.handleRequestImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/base-server.js:807:17)
+    at async /Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/dev/next-dev-server.js:331:20
+    at async Span.traceAsyncFn (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/trace/trace.js:151:20)
+    at async DevServer.handleRequest (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/dev/next-dev-server.js:328:24)
+    at async invokeRender (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:163:21)
+    at async handleRequest (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:342:24)
+    at async requestHandlerImpl (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/router-server.js:366:13)
+    at async Server.requestListener (/Users/abdulaziz.f/Desktop/abdulaziz/2nd project/Final-HR/node_modules/next/dist/server/lib/start-server.js:140:13)
 [?25h

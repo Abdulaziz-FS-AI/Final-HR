@@ -503,7 +503,7 @@ ${resumeText}
           experience_score: experienceScore,
           bonus_points: evaluation.bonus_points,
           penalty_points: evaluation.penalty_points,
-          ai_confidence: evaluation.ai_confidence,
+          ai_confidence: evaluation.ai_confidence * 100, // Convert 0-1 to 0-100 for database
           ai_model_used: 'openai/gpt-oss-120b',
           status: status,
           match_level: matchLevel,

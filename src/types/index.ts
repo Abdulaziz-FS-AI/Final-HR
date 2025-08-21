@@ -233,52 +233,6 @@ export interface UploadOptions {
   priority?: 'low' | 'normal' | 'high'
 }
 
-// AI evaluation types
-export interface AIEvaluationRequest {
-  roleId: string
-  fileId: string
-  resumeText: string
-  contactInfo?: {
-    name?: string
-    email?: string
-    phone?: string
-  }
-}
-
-export interface AIEvaluationResponse {
-  candidate_name: string
-  overall_score: number
-  skills_score: number
-  questions_score: number
-  bonus_points: number
-  penalty_points: number
-  bonus_breakdown?: {
-    education_bonus?: number
-    company_bonus?: number
-    projects_bonus?: number
-    certifications_bonus?: number
-  }
-  penalty_breakdown?: {
-    job_stability_penalty?: number
-    employment_gap_penalty?: number
-  }
-  skills_analysis: {
-    skill_name: string
-    found: boolean
-    level: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'
-    evidence?: string
-  }[]
-  questions_analysis: {
-    question: string
-    answer: 'YES' | 'NO' | 'PARTIAL'
-    quality: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'
-    evidence?: string
-  }[]
-  recommendations: string[]
-  red_flags: string[]
-  analysis_summary: string
-  ai_confidence: number
-}
 
 // Analytics types
 export interface RoleAnalytics {
@@ -321,13 +275,6 @@ export interface AuthUser {
   avatarUrl?: string
 }
 
-// Error types
-export interface AppError {
-  code: string
-  message: string
-  details?: any
-  timestamp: string
-}
 
 // API Response types
 export interface ApiResponse<T = any> {

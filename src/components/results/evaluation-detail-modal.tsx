@@ -47,11 +47,13 @@ export function EvaluationDetailModal({ evaluation, onClose }: EvaluationDetailM
     }
   }
 
-  const skillsAnalysis = evaluation.expanded_view?.skills_analysis || evaluation.skills_analysis || []
-  const questionsAnalysis = evaluation.expanded_view?.questions_analysis || evaluation.questions_analysis || []
-  const recommendations = evaluation.expanded_view?.recommendations || evaluation.recommendations || []
-  const redFlags = evaluation.expanded_view?.red_flags || evaluation.red_flags || []
-  const analysisSummary = evaluation.expanded_view?.analysis_summary || evaluation.analysis_summary || ''
+  // Safely access expanded_view data with type assertion
+  const expandedView = evaluation.expanded_view as any
+  const skillsAnalysis = expandedView?.skills_analysis || []
+  const questionsAnalysis = expandedView?.questions_analysis || []
+  const recommendations = expandedView?.recommendations || []
+  const redFlags = expandedView?.red_flags || []
+  const analysisSummary = expandedView?.analysis_summary || ''
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
