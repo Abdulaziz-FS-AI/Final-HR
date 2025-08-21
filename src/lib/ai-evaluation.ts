@@ -463,7 +463,29 @@ ${resumeText}
         throw new Error('File not found')
       }
 
-      // Save the evaluation result
+      // Extract candidate contact info from AI evaluation (more reliable than regex)
+      const candidateEmail = this.extractEmailFromEvaluation(evaluation) || request.contactInfo?.email || null
+      const candidatePhone = this.extractPhoneFromEvaluation(evaluation) || request.contactInfo?.phone || null
+      
+      // Calculate education and experience scores from bonus breakdown
+      const educationScore = this.calculateEducationScore(evaluation)
+      const experienceScore = this.calculateExperienceScore(evaluation)
+
+      // Get role configuration for dynamic thresholds
+      const { data: roleConfig } = await supabase
+        .from('roles')
+        .select('bonus_config, penalty_config')
+        .eq('id', request.roleId)
+        .single()
+
+      // Calculate status with role-specific thresholds
+      const qualificationThreshold = roleConfig?.bonus_config?.qualificationThreshold || 60
+      const status = evaluation.overall_score >= qualificationThreshold ? 'QUALIFIED' : 'REJECTED'
+      
+      // Calculate match level with role-specific ranges
+      const matchLevel = this.calculateMatchLevel(evaluation.overall_score, roleConfig)
+
+      // Save the evaluation result with ALL data
       const { error } = await supabase
         .from('evaluation_results')
         .insert({
@@ -472,40 +494,44 @@ ${resumeText}
           user_id: fileData.user_id,
           role_id: request.roleId,
           candidate_name: evaluation.candidate_name,
-          candidate_email: request.contactInfo?.email || null,
-          candidate_phone: request.contactInfo?.phone || null,
+          candidate_email: candidateEmail,
+          candidate_phone: candidatePhone,
           overall_score: evaluation.overall_score,
-          bonus_points: evaluation.bonus_points,
-          penalty_points: evaluation.penalty_points,
           skills_score: evaluation.skills_score,
           questions_score: evaluation.questions_score,
+          education_score: educationScore,
+          experience_score: experienceScore,
+          bonus_points: evaluation.bonus_points,
+          penalty_points: evaluation.penalty_points,
           ai_confidence: evaluation.ai_confidence,
           ai_model_used: 'openai/gpt-oss-120b',
-          status: evaluation.overall_score >= 60 ? 'QUALIFIED' : 'REJECTED',
-          match_level: evaluation.overall_score >= 90 ? 'PERFECT' : 
-                      evaluation.overall_score >= 80 ? 'STRONG' : 
-                      evaluation.overall_score >= 70 ? 'GOOD' : 
-                      evaluation.overall_score >= 60 ? 'FAIR' : 'POOR',
+          status: status,
+          match_level: matchLevel,
+          // Store only essential summary data in table_view
           table_view: {
             candidate_name: evaluation.candidate_name,
             overall_score: evaluation.overall_score,
             skills_score: evaluation.skills_score,
             questions_score: evaluation.questions_score,
-            bonus_points: evaluation.bonus_points,
-            penalty_points: evaluation.penalty_points,
-            ai_confidence: evaluation.ai_confidence,
-            recommendations_count: evaluation.recommendations?.length || 0,
-            red_flags_count: evaluation.red_flags?.length || 0
+            education_score: educationScore,
+            experience_score: experienceScore,
+            status: status,
+            match_level: matchLevel
           },
+          // Store complete detailed analysis in expanded_view
           expanded_view: {
+            base_score: evaluation.base_score || evaluation.overall_score,
             skills_analysis: evaluation.skills_analysis,
             questions_analysis: evaluation.questions_analysis,
+            bonus_breakdown: evaluation.bonus_breakdown || {},
+            penalty_breakdown: evaluation.penalty_breakdown || {},
             recommendations: evaluation.recommendations,
             red_flags: evaluation.red_flags,
             analysis_summary: evaluation.analysis_summary,
-            bonus_breakdown: evaluation.bonus_breakdown || {},
-            penalty_breakdown: evaluation.penalty_breakdown || {},
-            raw_ai_output: evaluation
+            contact_info: {
+              email: candidateEmail,
+              phone: candidatePhone
+            }
           }
         })
 
@@ -532,6 +558,99 @@ ${resumeText}
       email: null, 
       phone: null
     }
+  }
+
+  /**
+   * Extract email from AI evaluation results (more accurate than regex)
+   */
+  private extractEmailFromEvaluation(evaluation: AIEvaluationResponse): string | null {
+    // First check if AI found an email in skills/questions analysis
+    for (const skill of evaluation.skills_analysis || []) {
+      if (skill.evidence && skill.evidence.includes('@')) {
+        const emailMatch = skill.evidence.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)
+        if (emailMatch) return emailMatch[0]
+      }
+    }
+    
+    // Check analysis summary
+    if (evaluation.analysis_summary) {
+      const emailMatch = evaluation.analysis_summary.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)
+      if (emailMatch) return emailMatch[0]
+    }
+    
+    return null
+  }
+
+  /**
+   * Extract phone from AI evaluation results
+   */
+  private extractPhoneFromEvaluation(evaluation: AIEvaluationResponse): string | null {
+    // Check AI analysis for phone numbers
+    for (const skill of evaluation.skills_analysis || []) {
+      if (skill.evidence) {
+        const phoneMatch = skill.evidence.match(/(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/)
+        if (phoneMatch) return phoneMatch[0]
+      }
+    }
+    
+    return null
+  }
+
+  /**
+   * Calculate education score from bonus breakdown
+   */
+  private calculateEducationScore(evaluation: AIEvaluationResponse): number {
+    const educationBonus = evaluation.bonus_breakdown?.education_bonus || 0
+    // Convert bonus points to percentage score (max 15 bonus = 100%)
+    return Math.min(100, Math.round((educationBonus / 15) * 100))
+  }
+
+  /**
+   * Calculate experience score from questions and skills
+   */
+  private calculateExperienceScore(evaluation: AIEvaluationResponse): number {
+    let experienceScore = 0
+    let experienceFactors = 0
+    
+    // Check questions related to experience
+    for (const question of evaluation.questions_analysis || []) {
+      if (question.question.toLowerCase().includes('experience') || 
+          question.question.toLowerCase().includes('years') ||
+          question.question.toLowerCase().includes('worked')) {
+        if (question.answer === 'YES') {
+          experienceScore += question.quality === 'HIGH' ? 100 : question.quality === 'MEDIUM' ? 70 : 40
+        }
+        experienceFactors++
+      }
+    }
+    
+    // Check company bonus (indicates good experience)
+    const companyBonus = evaluation.bonus_breakdown?.company_bonus || 0
+    if (companyBonus > 0) {
+      experienceScore += Math.min(100, (companyBonus / 20) * 100)
+      experienceFactors++
+    }
+    
+    return experienceFactors > 0 ? Math.round(experienceScore / experienceFactors) : 0
+  }
+
+  /**
+   * Calculate match level with role-specific thresholds
+   */
+  private calculateMatchLevel(score: number, roleConfig: any): string {
+    // Use role-specific thresholds if defined
+    const thresholds = roleConfig?.bonus_config?.matchThresholds || {
+      perfect: 90,
+      strong: 80,
+      good: 70,
+      fair: 60
+    }
+    
+    if (score >= thresholds.perfect) return 'PERFECT'
+    if (score >= thresholds.strong) return 'STRONG'
+    if (score >= thresholds.good) return 'GOOD'
+    if (score >= thresholds.fair) return 'FAIR'
+    return 'POOR'
   }
 
 }

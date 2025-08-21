@@ -42,13 +42,13 @@ export async function POST(request: NextRequest) {
 
           actualResumeText = fileData.extracted_text
           
-          // Extract contact info if not provided
+          // Don't extract contact info here - let AI handle it
+          // AI will extract contact info more accurately during evaluation
           if (!actualContactInfo) {
-            const emailMatch = actualResumeText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)
-            const phoneMatch = actualResumeText.match(/[\d\s\-\(\)\.+]{10,}/)
             actualContactInfo = {
-              email: emailMatch?.[0],
-              phone: phoneMatch?.[0]
+              name: null,
+              email: null,
+              phone: null
             }
           }
         }
