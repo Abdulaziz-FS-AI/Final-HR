@@ -126,6 +126,8 @@ export function FileUploadForm() {
           storage_path: `/uploads/${uploadFile.file.name}`,
           mime_type: uploadFile.file.type,
           extracted_text: extractionResult.text,
+          extraction_method: extractionResult.metadata?.extraction_method || extractionResult.info?.method || 'unknown',
+          upload_status: 'completed',
           session_id: actualSessionId || sessionId,
           user_id: user.id,
           uploaded_at: new Date().toISOString(),
@@ -158,6 +160,29 @@ export function FileUploadForm() {
       console.error('File processing error:', error)
       
       const errorMessage = getUserFriendlyMessage(error)
+      
+      // Store failed attempt in database for tracking
+      try {
+        await supabase
+          .from('file_uploads')
+          .insert({
+            original_name: uploadFile.file.name,
+            stored_name: uploadFile.file.name,
+            file_code: `file-${Date.now()}`,
+            file_size: uploadFile.file.size,
+            storage_path: `/uploads/${uploadFile.file.name}`,
+            mime_type: uploadFile.file.type,
+            extracted_text: null,
+            extraction_method: null,
+            upload_status: 'failed',
+            session_id: actualSessionId || sessionId,
+            user_id: user.id,
+            uploaded_at: new Date().toISOString(),
+            processed_at: new Date().toISOString()
+          })
+      } catch (dbError) {
+        console.error('Failed to log error to database:', dbError)
+      }
       
       setFiles(prev => prev.map(f => 
         f.id === uploadFile.id ? { 

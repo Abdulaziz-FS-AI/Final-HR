@@ -20,11 +20,11 @@ async function extractTextFromPDFRobust(buffer: Buffer) {
       throw new Error('PDF file too large (max 5MB)')
     }
 
-    // Try extraction methods in order of preference
+    // Try extraction methods in order of preference (most reliable first)
     const methods = [
-      () => extractWithPdfJs(buffer),
       () => extractWithPdfParse(buffer),
       () => extractWithSimpleParser(buffer),
+      () => extractWithPdfJs(buffer),
       () => extractWithFallback(buffer)
     ]
 
@@ -87,17 +87,16 @@ async function extractWithPdfJs(buffer: Buffer) {
     // Dynamic import
     const pdfjs = await import('pdfjs-dist')
     
-    // Configure worker
-    if (typeof window === 'undefined') {
-      pdfjs.GlobalWorkerOptions.workerSrc = ''
-    }
+    // Disable worker for Node.js server environment
+    pdfjs.GlobalWorkerOptions.workerSrc = ''
 
     const doc = await pdfjs.getDocument({ 
       data: buffer,
       verbosity: 0,
-      standardFontDataUrl: '',
-      cMapUrl: '',
-      cMapPacked: false
+      useSystemFonts: true,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      maxImageSize: 1024 * 1024 // 1MB max image size
     }).promise
     
     let text = ''
@@ -148,25 +147,70 @@ async function extractWithPdfJs(buffer: Buffer) {
 }
 
 async function extractWithSimpleParser(buffer: Buffer) {
-  // Try to extract readable text from PDF buffer
-  const bufferStr = buffer.toString('binary')
-  const textMatches = bufferStr.match(/\(([^)]+)\)/g) || []
-  
-  let text = textMatches
-    .map(match => match.slice(1, -1))
-    .filter(str => str.length > 2 && /[a-zA-Z]/.test(str))
-    .join(' ')
-  
-  // Clean extracted text
-  text = text
-    .replace(/[^\x20-\x7E\n]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-  
-  return {
-    text,
-    pages: 1,
-    method: 'simple-parser'
+  try {
+    const bufferStr = buffer.toString('binary')
+    
+    // Multiple extraction patterns for different PDF encodings
+    const patterns = [
+      /\(([^)]+)\)/g,           // Standard text objects (text)
+      /\[([^\]]+)\]/g,          // Array text objects [text]
+      /<([^>]+)>/g,             // Hex encoded text <text>
+      /BT\s+(.*?)\s+ET/gs,      // Text blocks between BT and ET
+      /Tj\s*\(([^)]*)\)/g,      // Show text operator with parentheses
+      /TJ\s*\[([^\]]*)\]/g      // Show text array operator
+    ]
+    
+    let allMatches: string[] = []
+    
+    for (const pattern of patterns) {
+      const matches = bufferStr.match(pattern) || []
+      allMatches = allMatches.concat(matches)
+    }
+    
+    // Extract text from matches
+    let text = allMatches
+      .map(match => {
+        // Remove operators and brackets
+        return match
+          .replace(/^(BT\s+|Tj\s*\(|TJ\s*\[|\(|\[|<)/, '')
+          .replace(/(\)|ET\s*|\]|>)$/, '')
+          .trim()
+      })
+      .filter(str => {
+        // Filter for meaningful text
+        return str.length > 1 && 
+               /[a-zA-Z]/.test(str) && 
+               !str.match(/^[0-9\s.,-]+$/) // Skip pure numbers/spacing
+      })
+      .join(' ')
+    
+    // Advanced cleaning
+    text = text
+      .replace(/\\n/g, '\n')           // Convert escaped newlines
+      .replace(/\\r/g, '\r')           // Convert escaped carriage returns
+      .replace(/\\t/g, '\t')           // Convert escaped tabs
+      .replace(/\\\(/g, '(')           // Unescape parentheses
+      .replace(/\\\)/g, ')')
+      .replace(/[^\x20-\x7E\n\r\t]/g, ' ')  // Replace non-printable chars
+      .replace(/\s+/g, ' ')            // Normalize whitespace
+      .replace(/\n\s*\n\s*\n/g, '\n\n') // Normalize line breaks
+      .trim()
+    
+    if (text.length < 20) {
+      throw new Error('Simple parser extracted insufficient text')
+    }
+    
+    return {
+      text,
+      pages: 1,
+      method: 'simple-parser',
+      confidence: text.length > 100 ? 0.7 : 0.5
+    }
+  } catch (error) {
+    console.error('Simple parser failed:', error)
+    const enhancedError = error as any
+    enhancedError.method = 'simple-parser'
+    throw enhancedError
   }
 }
 
