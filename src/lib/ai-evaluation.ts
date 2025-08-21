@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { createAdminClient } from './supabase'
 import { AIEvaluationRequest, AIEvaluationResponse, RoleWithDetails, FileUpload } from '@/types'
 import { handleApiError, createAppError, ErrorLogger } from './error-handling'
 
@@ -61,6 +61,7 @@ export class AIEvaluationService {
 
     try {
       // Get all completed files from the session
+      const supabase = createAdminClient()
       const { data: files, error } = await supabase
         .from('file_uploads')
         .select('*')
@@ -131,6 +132,7 @@ export class AIEvaluationService {
    * Get role details with skills and questions
    */
   private async getRoleDetails(roleId: string): Promise<RoleWithDetails | null> {
+    const supabase = createAdminClient()
     const { data, error } = await supabase
       .from('roles')
       .select(`
@@ -443,27 +445,27 @@ Respond with ONLY the JSON object, no additional text.`
     evaluation: AIEvaluationResponse
   ): Promise<void> {
     try {
-      // First create or get evaluation session
-      const sessionId = await this.getOrCreateEvaluationSession(request.roleId)
-
-      // Get user_id and role_id for the evaluation
-      const userId = (await supabase.auth.getUser()).data.user?.id
+      const supabase = createAdminClient()
       
-      // Get role_id from session
-      const { data: sessionData } = await supabase
-        .from('evaluation_sessions')
-        .select('role_id')
-        .eq('id', sessionId)
+      // Get file details to extract session_id and user_id
+      const { data: fileData } = await supabase
+        .from('file_uploads')
+        .select('session_id, user_id')
+        .eq('id', request.fileId)
         .single()
+      
+      if (!fileData) {
+        throw new Error('File not found')
+      }
 
       // Save the evaluation result
       const { error } = await supabase
         .from('evaluation_results')
         .insert({
           file_id: request.fileId,
-          session_id: sessionId,
-          user_id: userId,
-          role_id: sessionData?.role_id,
+          session_id: fileData.session_id,
+          user_id: fileData.user_id,
+          role_id: request.roleId,
           candidate_name: evaluation.candidate_name,
           candidate_email: request.contactInfo?.email || null,
           candidate_phone: request.contactInfo?.phone || null,

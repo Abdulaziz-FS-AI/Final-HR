@@ -119,7 +119,6 @@ export function FileUploadForm() {
           extracted_text: extractionResult.text,
           user_id: user.id,
           session_id: actualSessionId || sessionId,
-          extraction_metadata: extractionResult.metadata,
           processing_status: 'completed'
         })
         .select()

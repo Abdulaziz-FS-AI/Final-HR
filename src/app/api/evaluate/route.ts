@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { AIEvaluationService } from '@/lib/ai-evaluation'
-import { supabase } from '@/lib/supabase'
+import { createAdminClient } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
         let actualContactInfo = contactInfo
 
         if (!actualResumeText) {
+          const supabase = createAdminClient()
           const { data: fileData, error: fileError } = await supabase
             .from('file_uploads')
             .select('extracted_text')
