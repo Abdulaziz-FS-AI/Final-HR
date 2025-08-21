@@ -28,7 +28,12 @@ export function AnalyticsDashboard() {
   const [analytics, setAnalytics] = useState<RoleAnalytics | null>(null)
 
   useEffect(() => {
-    if (evaluations.length === 0) return
+    console.log('📈 Analytics Dashboard - Evaluations:', evaluations.length)
+    console.log('📈 Analytics Dashboard - Roles:', roles.length)
+    if (evaluations.length === 0) {
+      console.log('⚠️ No evaluations to analyze')
+      return
+    }
 
     // Filter evaluations based on selected role and timeframe
     let filteredEvaluations = evaluations

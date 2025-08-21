@@ -12,10 +12,26 @@ export function useEvaluations(roleId?: string, sessionId?: string) {
   const { user } = useAuth()
 
   const fetchEvaluations = async () => {
-    if (!user) return
+    if (!user) {
+      console.log('⚠️ No user in fetchEvaluations')
+      return
+    }
 
     try {
       setLoading(true)
+      console.log('📊 Fetching evaluations for user:', user.id, user.email)
+      
+      // Test: Try to fetch without user filter first
+      const { data: testData, error: testError } = await supabase
+        .from('evaluation_results')
+        .select('id, user_id, candidate_name')
+        .limit(5)
+      
+      console.log('🔍 Test query (no user filter):', { 
+        testData, 
+        testError,
+        canSeeAnyData: !!testData?.length 
+      })
       
       let query = supabase
         .from('evaluation_results')
@@ -38,7 +54,23 @@ export function useEvaluations(roleId?: string, sessionId?: string) {
 
       const { data, error } = await query
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Error fetching evaluations:', error)
+        throw error
+      }
+      
+      console.log('✅ Fetched evaluations:', data?.length || 0, 'results')
+      
+      // Additional debug: Check what we actually got
+      if (data && data.length > 0) {
+        console.log('📋 Sample evaluation data:', {
+          hasFile: !!data[0].file,
+          hasSession: !!data[0].session,
+          hasRole: !!data[0].session?.role,
+          firstResult: data[0]
+        })
+      }
+      
       setEvaluations(data || [])
     } catch (err: any) {
       setError(err.message)
@@ -207,7 +239,9 @@ export function useEvaluations(roleId?: string, sessionId?: string) {
   }, [user])
 
   useEffect(() => {
-    fetchEvaluations()
+    if (user) {
+      fetchEvaluations()
+    }
   }, [user, roleId, sessionId])
 
   return {

@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useEvaluations } from '@/hooks/use-evaluations'
+import { useAuth } from '@/lib/auth-context'
 import { EvaluationResultCard } from './evaluation-result-card'
 import { EvaluationDetailModal } from './evaluation-detail-modal'
 import { EvaluationResultWithDetails } from '@/types'
@@ -24,6 +25,14 @@ interface EvaluationResultsListProps {
 export function EvaluationResultsList({ roleId, sessionId }: EvaluationResultsListProps) {
   const { evaluations, loading, error } = useEvaluations(roleId || undefined, sessionId || undefined)
   const [selectedEvaluation, setSelectedEvaluation] = useState<EvaluationResultWithDetails | null>(null)
+  const { user } = useAuth()
+  
+  // Debug: Show which account is logged in
+  useEffect(() => {
+    if (user) {
+      console.log('👤 Current user in Results:', user.email, '(ID:', user.id, ')')
+    }
+  }, [user])
 
   if (loading) {
     return (
@@ -57,7 +66,17 @@ export function EvaluationResultsList({ roleId, sessionId }: EvaluationResultsLi
               : 'No evaluations have been completed yet. Upload and process some resumes to see results here.'
             }
           </p>
-          <Button onClick={() => window.location.href = '/dashboard/upload'}>
+          {user && (
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                Currently logged in as: <strong>{user.email}</strong>
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                Note: Evaluation data exists for abdulaziz.fs.ai@gmail.com account
+              </p>
+            </div>
+          )}
+          <Button className="mt-4" onClick={() => window.location.href = '/dashboard/upload'}>
             Upload Resumes
           </Button>
         </CardContent>
