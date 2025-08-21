@@ -25,7 +25,7 @@ export class AIEvaluationService {
       // Generate AI prompt based on role and resume
       const prompt = this.buildEvaluationPrompt(role, request.resumeText, request.contactInfo)
 
-      // Call Hyperbolic API
+      // Call Hyperbolic API directly (server-side)
       const aiResponse = await this.callHyperbolicAPI(prompt)
 
       // Parse and validate AI response
@@ -98,29 +98,51 @@ export class AIEvaluationService {
   }
 
   /**
-   * Call Hyperbolic AI API
+   * Call Hyperbolic AI API directly
    */
   private async callHyperbolicAPI(prompt: string): Promise<string> {
     try {
-      const response = await fetch('/api/ai-evaluate', {
+      const apiKey = process.env.HYPERBOLIC_API_KEY
+      if (!apiKey) {
+        throw new Error('HYPERBOLIC_API_KEY not found in environment variables')
+      }
+
+      const response = await fetch(this.HYPERBOLIC_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
         },
-        body: JSON.stringify({ prompt })
+        body: JSON.stringify({
+          model: 'openai/gpt-oss-120b',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert HR recruiter. Respond only with valid JSON objects as requested.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 3000,
+          temperature: 0.15,
+          top_p: 0.85,
+          stream: false
+        })
       })
 
       if (!response.ok) {
-        throw new Error(`AI API error: ${response.status} ${response.statusText}`)
+        throw new Error(`Hyperbolic API error: ${response.status} ${response.statusText}`)
       }
 
-      const result = await response.json()
+      const data = await response.json()
       
-      if (!result.success || !result.content) {
-        throw new Error('Invalid AI API response')
+      if (!data.choices?.[0]?.message?.content) {
+        throw new Error('Invalid response from AI service')
       }
 
-      return result.content
+      return data.choices[0].message.content
     } catch (error: any) {
       console.error('AI API call failed:', error)
       throw new Error(`AI evaluation failed: ${error.message}`)
@@ -248,7 +270,7 @@ ${resumeText}
   "ai_confidence": number (0-1)
 }
 
-Respond with ONLY the JSON object, no additional text.`
+**IMPORTANT: Your response must be ONLY valid JSON. Do not include any thinking process, explanations, or any text outside the JSON object. Start directly with '{' and end with '}'.**`
   }
 
   /**
@@ -359,11 +381,27 @@ Respond with ONLY the JSON object, no additional text.`
       // Clean the response to extract JSON
       let jsonStr = aiResponse.trim()
       
+      // Remove thinking tags if present
+      if (jsonStr.includes('<think>')) {
+        // Extract everything after </think>
+        const thinkEndIndex = jsonStr.lastIndexOf('</think>')
+        if (thinkEndIndex !== -1) {
+          jsonStr = jsonStr.substring(thinkEndIndex + 8).trim()
+        }
+      }
+      
       // Remove any markdown formatting
       if (jsonStr.startsWith('```json')) {
         jsonStr = jsonStr.replace(/```json\s*/, '').replace(/```\s*$/, '')
       }
       
+      // Try to find JSON object if there's extra text
+      const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        jsonStr = jsonMatch[0]
+      }
+      
+      console.log('Parsing AI response JSON:', jsonStr.substring(0, 500) + '...')
       const parsed = JSON.parse(jsonStr)
       
       // Validate required fields
@@ -485,11 +523,10 @@ Respond with ONLY the JSON object, no additional text.`
 
   /**
    * Extract contact information from resume text
-   * Let AI handle this - just return empty for now
+   * Pure text extraction - no parsing, let AI handle everything
    */
   private extractContactInfo(resumeText: string): any {
-    // Don't parse - send raw text to AI
-    // AI will extract all information needed
+    // Pure text extraction only - AI will do all parsing
     return {
       name: null,
       email: null, 

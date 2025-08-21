@@ -9,8 +9,6 @@ export interface ExtractionResult {
   extractionId: string
   text?: string
   metadata?: any
-  confidence: number
-  issues: string[]
   duration: number
   fileId: string
 }
@@ -82,41 +80,19 @@ export class PDFExtractionService {
       // Step 7: Extract text with multiple fallbacks
       const extractedData = await this.extractWithFallbacks(file)
       
-      // Step 8: Validate extraction quality
-      const qualityCheck = this.validateExtraction(extractedData.text)
-      
-      // Step 9: Store extracted text
+      // Step 8: Store extracted text
       const textPath = await this.storage.storeExtractedText(
         extractedData.text,
         userId,
         extractionId
       )
       
-      // Step 10: Update file record with extraction results
+      // Step 9: Update file record with pure extraction results
       await supabase
         .from('file_uploads')
         .update({
           extracted_text: extractedData.text,
-          extracted_metadata: {
-            method: extractedData.method,
-            wordCount: extractedData.wordCount,
-            duration: Date.now() - startTime,
-            qualityCheck
-          },
-          extraction_confidence: qualityCheck.confidence,
           extraction_method: extractedData.method,
-          word_count: extractedData.wordCount,
-          character_count: extractedData.text.length,
-          has_contact_info: qualityCheck.hasContact,
-          has_experience: qualityCheck.hasExperience,
-          has_education: qualityCheck.hasEducation,
-          has_skills: qualityCheck.hasSkills,
-          looks_like_resume: qualityCheck.looksLikeResume,
-          extracted_email: qualityCheck.email,
-          extracted_phone: qualityCheck.phone,
-          extracted_name: qualityCheck.name,
-          quality_score: qualityCheck.score,
-          quality_issues: qualityCheck.issues.length > 0 ? qualityCheck.issues : null,
           processed_at: new Date().toISOString()
         })
         .eq('id', fileRecord.id)
@@ -127,8 +103,6 @@ export class PDFExtractionService {
         extractionId,
         text: extractedData.text,
         metadata: extractedData.metadata,
-        confidence: qualityCheck.confidence,
-        issues: qualityCheck.issues,
         duration: Date.now() - startTime,
         fileId: fileRecord.id
       }
@@ -257,50 +231,6 @@ Cloud: AWS, Docker, Kubernetes
 [Note: This is fallback text. Actual PDF extraction failed.]`
   }
   
-  /**
-   * Validate extraction quality
-   */
-  private validateExtraction(text: string): any {
-    const issues: string[] = []
-    let confidence = 0.8 // Start with good confidence
-    
-    // Basic validation - just check if we have text
-    if (!text || text.length < 10) {
-      issues.push('No text extracted')
-      confidence = 0
-    } else if (text.length < 50) {
-      issues.push('Very short text - may be incomplete')
-      confidence = 0.3
-    }
-    
-    // Check for binary garbage (PDF extraction failure indicator)
-    if (text.includes('endstream') || text.includes('endobj') || text.includes('/Type /Font')) {
-      issues.push('PDF structure detected - extraction may have failed')
-      confidence = 0.1
-    }
-    
-    // Very basic check for excessive special characters
-    const printableText = text.replace(/[\x00-\x1F\x7F-\x9F]/g, '')
-    if (printableText.length < text.length * 0.8) {
-      issues.push('Too many non-printable characters')
-      confidence = 0.2
-    }
-    
-    // Don't parse content - let AI do it
-    return {
-      confidence: Math.max(0.1, confidence), // Always proceed if we have any text
-      score: Math.round(confidence * 100),
-      issues,
-      hasContact: true, // Assume yes, let AI verify
-      hasExperience: true, // Assume yes, let AI verify
-      hasEducation: true, // Assume yes, let AI verify
-      hasSkills: true, // Assume yes, let AI verify
-      looksLikeResume: text.length > 50, // Very basic check
-      email: null, // Let AI extract
-      phone: null, // Let AI extract
-      name: null // Let AI extract
-    }
-  }
   
   /**
    * Check for duplicate PDFs using file hash
@@ -355,8 +285,6 @@ Cloud: AWS, Docker, Kubernetes
       extractionId: newExtractionId,
       text: existing.extracted_text,
       metadata: {},
-      confidence: 1.0,
-      issues: ['Duplicate of previously processed file'],
       duration: 0,
       fileId: newFile!.id
     }
