@@ -81,6 +81,12 @@ export function useRoles() {
 
   const createRole = async (roleData: RoleFormData) => {
     // Validation
+    console.log('🔐 Current auth state:', { 
+      hasUser: !!user, 
+      userId: user?.id,
+      userEmail: user?.email 
+    })
+    
     if (!user?.id) throw new Error('Authentication required. Please log in.')
 
     // Import utilities
@@ -114,6 +120,18 @@ export function useRoles() {
     let createdRoleId: string | null = null
 
     try {
+      // Debug: Check auth state before insert
+      const { data: { session } } = await supabase.auth.getSession()
+      console.log('🔒 Auth check before insert:', {
+        hasSession: !!session,
+        sessionUserId: session?.user?.id,
+        sessionEmail: session?.user?.email,
+        tokenValid: session?.expires_at ? new Date(session.expires_at * 1000) > new Date() : false
+      })
+      
+      // Debug: Log the data being inserted
+      console.log('📤 Attempting to insert role with data:', transformedData.roleData)
+      
       // Create role with simplified error handling
       const { data: roleResult, error: roleError } = await supabase
         .from('roles')
@@ -122,6 +140,10 @@ export function useRoles() {
         .single()
       
       if (roleError) {
+        console.error('❌ Role insert failed:', roleError)
+        console.error('   Error code:', roleError.code)
+        console.error('   Error hint:', roleError.hint)
+        console.error('   Error details:', roleError.details)
         throw new Error(`Failed to create role: ${roleError.message}`)
       }
       
