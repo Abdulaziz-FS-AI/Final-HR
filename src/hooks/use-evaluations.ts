@@ -21,24 +21,26 @@ export function useEvaluations(roleId?: string, sessionId?: string) {
       setLoading(true)
       console.log('📊 Fetching evaluations for user:', user.id, user.email)
       
-      // Test: Try to fetch without user filter first
-      const { data: testData, error: testError } = await supabase
+      // Test 1: Basic query without joins
+      const { data: basicData, error: basicError } = await supabase
         .from('evaluation_results')
-        .select('id, user_id, candidate_name')
-        .limit(5)
+        .select('*')
+        .eq('user_id', user.id)
       
-      console.log('🔍 Test query (no user filter):', { 
-        testData, 
-        testError,
-        canSeeAnyData: !!testData?.length 
+      console.log('🔍 Test 1 - Basic query:', { 
+        count: basicData?.length || 0,
+        error: basicError,
+        sample: basicData?.[0]
       })
       
+      // If basic query works, proceed with full query
       let query = supabase
         .from('evaluation_results')
         .select(`
           *,
           file:file_uploads(*),
-          session:evaluation_sessions(*, role:roles(*))
+          role:roles(*),
+          session:evaluation_sessions(*)
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -86,7 +88,8 @@ export function useEvaluations(roleId?: string, sessionId?: string) {
         .select(`
           *,
           file:file_uploads(*),
-          session:evaluation_sessions(*, role:roles(*))
+          role:roles(*),
+          session:evaluation_sessions(*)
         `)
         .eq('id', evaluationId)
         .eq('user_id', user?.id || '')
