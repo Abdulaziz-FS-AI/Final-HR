@@ -1,4 +1,4 @@
-import { createAdminClient } from './supabase'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { AIEvaluationRequest, AIEvaluationResponse, RoleWithDetails, FileUpload } from '@/types'
 import { handleApiError, createAppError, ErrorLogger } from './error-handling'
 

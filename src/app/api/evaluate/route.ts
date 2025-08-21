@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { AIEvaluationService } from '@/lib/ai-evaluation'
-import { createAdminClient } from '@/lib/supabase'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 export async function POST(request: NextRequest) {
   try {
