@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth-context'
 import { useRoles } from '@/hooks/use-roles'
 import { useEvaluations } from '@/hooks/use-evaluations'
-import { PDFExtractionService } from '@/lib/pdf-extraction'
+// Use fixed PDF extraction API directly
 import { useErrorToast, useSuccessToast } from '@/components/ui/toast'
 import { getUserFriendlyMessage } from '@/lib/error-handling'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -54,8 +54,6 @@ export function FileUploadForm() {
     }
   }, [roles])
   
-  const extractionService = new PDFExtractionService()
-
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const newFiles: UploadFile[] = acceptedFiles.map(file => ({
       file,
@@ -96,12 +94,47 @@ export function FileUploadForm() {
         f.id === uploadFile.id ? { ...f, status: 'processing' } : f
       ))
 
-      const result = await extractionService.extractPDF(
-        uploadFile.file,
-        actualSessionId || sessionId,
-        user.id,
-        5 // priority
-      )
+      // Use the fixed PDF extraction API
+      const formData = new FormData()
+      formData.append('pdf', uploadFile.file)
+      
+      const response = await fetch('/api/extract-pdf', {
+        method: 'POST',
+        body: formData
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'PDF extraction failed')
+      }
+      
+      const extractionResult = await response.json()
+      
+      // Store in database
+      const { data: resume, error: dbError } = await supabase
+        .from('resumes')
+        .insert({
+          file_name: uploadFile.file.name,
+          file_size: uploadFile.file.size,
+          extracted_text: extractionResult.text,
+          user_id: user.id,
+          session_id: actualSessionId || sessionId,
+          extraction_metadata: extractionResult.metadata
+        })
+        .select()
+        .single()
+      
+      if (dbError) {
+        throw new Error(`Database error: ${dbError.message}`)
+      }
+      
+      const result = {
+        extractionId: resume.id,
+        text: extractionResult.text,
+        confidence: extractionResult.info?.confidence || 0.8,
+        duration: 1000, // placeholder
+        issues: extractionResult.info?.extractionFailed ? ['Extraction quality may be low'] : []
+      }
 
       // Update with success
       setFiles(prev => prev.map(f => 
