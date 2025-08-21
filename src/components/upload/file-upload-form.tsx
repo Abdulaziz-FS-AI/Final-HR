@@ -114,12 +114,18 @@ export function FileUploadForm() {
       const { data: resume, error: dbError } = await supabase
         .from('file_uploads')
         .insert({
-          file_name: uploadFile.file.name,
+          original_name: uploadFile.file.name,
+          stored_name: uploadFile.file.name,
+          file_code: `file-${Date.now()}`,
           file_size: uploadFile.file.size,
+          storage_path: `/uploads/${uploadFile.file.name}`,
+          mime_type: uploadFile.file.type,
           extracted_text: extractionResult.text,
-          user_id: user.id,
           session_id: actualSessionId || sessionId,
-          processing_status: 'completed'
+          user_id: user.id,
+          processing_status: 'completed',
+          uploaded_at: new Date().toISOString(),
+          processed_at: new Date().toISOString()
         })
         .select()
         .single()
