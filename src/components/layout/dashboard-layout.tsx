@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth-context'
 import { ErrorBoundary } from '@/components/error-boundary'
@@ -97,7 +98,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
 function SidebarContent({ onSignOut }: { onSignOut: () => void }) {
   const { user } = useAuth()
-  const router = useRouter()
+  const pathname = usePathname()
 
   return (
     <div className="flex flex-col h-0 flex-1 bg-white border-r border-gray-200">
@@ -109,15 +110,22 @@ function SidebarContent({ onSignOut }: { onSignOut: () => void }) {
         <nav className="mt-5 flex-1 px-2 space-y-1">
           {navigation.map((item) => {
             const Icon = item.icon
+            const isActive = pathname === item.href || 
+                           (item.href !== '/dashboard' && pathname.startsWith(item.href))
+            
             return (
-              <button
+              <Link
                 key={item.name}
-                onClick={() => router.push(item.href)}
-                className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full text-left"
+                href={item.href}
+                className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md w-full transition-colors ${
+                  isActive 
+                    ? 'bg-blue-50 text-blue-700' 
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
               >
-                <Icon className="mr-3 h-5 w-5" />
+                <Icon className={`mr-3 h-5 w-5 ${isActive ? 'text-blue-700' : ''}`} />
                 {item.name}
-              </button>
+              </Link>
             )
           })}
         </nav>

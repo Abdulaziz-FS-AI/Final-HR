@@ -14,9 +14,14 @@ export default function ProtectedDashboardLayout({
   const router = useRouter()
 
   useEffect(() => {
+    // Only redirect if we're certain the user is not authenticated
+    // Add a small delay to prevent flash
     if (!loading && !isAuthenticated) {
       console.log('🚫 Not authenticated, redirecting to login')
-      router.replace('/auth/login')
+      const timer = setTimeout(() => {
+        router.replace('/auth/login')
+      }, 100)
+      return () => clearTimeout(timer)
     }
   }, [loading, isAuthenticated, router])
 
