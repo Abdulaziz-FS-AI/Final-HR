@@ -184,10 +184,26 @@ export class PDFExtractionService {
     })
     
     if (!response.ok) {
-      throw new Error(`PDF extraction API failed: ${response.statusText}`)
+      const errorData = await response.json().catch(() => ({}))
+      const errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`
+      const suggestions = errorData.suggestions || []
+      
+      console.error('PDF extraction API failed:', errorMessage)
+      if (suggestions.length > 0) {
+        console.log('Suggestions:', suggestions.join('; '))
+      }
+      
+      throw new Error(errorMessage)
     }
     
-    return await response.json()
+    const result = await response.json()
+    
+    // Validate the extracted text
+    if (!result.text || result.text.length < 10) {
+      throw new Error('PDF extraction returned insufficient text content')
+    }
+    
+    return result
   }
   
   /**

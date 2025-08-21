@@ -3,9 +3,21 @@ import { NextRequest, NextResponse } from 'next/server'
 // **FIXED** PDF extraction - solves Google Docs artifacts problem
 async function extractTextFromPDFRobust(buffer: Buffer) {
   try {
-    // Check file size (limit to 10MB)
-    if (buffer.length > 10 * 1024 * 1024) {
-      throw new Error('PDF file too large (max 10MB)')
+    // Basic PDF signature check
+    const pdfHeader = buffer.subarray(0, 8).toString('ascii')
+    if (!pdfHeader.startsWith('%PDF-')) {
+      throw new Error('File does not appear to be a valid PDF (missing PDF header)')
+    }
+
+    // Check for PDF encryption markers
+    const bufferStr = buffer.toString('ascii', 0, Math.min(buffer.length, 4096))
+    if (bufferStr.includes('/Encrypt') && bufferStr.includes('/Filter')) {
+      throw new Error('PDF appears to be encrypted or password protected')
+    }
+
+    // Check file size (limit to 5MB as defined in main function)
+    if (buffer.length > 5 * 1024 * 1024) {
+      throw new Error('PDF file too large (max 5MB)')
     }
 
     // Try extraction methods in order of preference
@@ -17,6 +29,7 @@ async function extractTextFromPDFRobust(buffer: Buffer) {
     ]
 
     let lastError: Error | null = null
+    const failedMethods: string[] = []
 
     for (const method of methods) {
       try {
@@ -27,16 +40,23 @@ async function extractTextFromPDFRobust(buffer: Buffer) {
           console.log(`✅ FIXED extraction successful with: ${result.method}, text length: ${result.text.length}`)
           return result
         } else {
-          console.log(`⚠️ Method ${result.method} returned poor quality text, trying next method`)
+          console.log(`⚠️ Method ${result.method} returned poor quality text (length: ${result.text?.length || 0}), trying next method`)
+          failedMethods.push(`${result.method} (poor quality)`)
         }
       } catch (error) {
         lastError = error as Error
+        failedMethods.push(`${(error as any).method || 'unknown'} (${error.message})`)
         console.warn('PDF extraction method failed:', error)
         continue
       }
     }
 
-    throw new Error(`All PDF extraction methods failed. Last error: ${lastError?.message}`)
+    // Provide detailed failure information
+    const errorDetails = failedMethods.length > 0 
+      ? `Methods tried: ${failedMethods.join(', ')}`
+      : 'No extraction methods available'
+
+    throw new Error(`All PDF extraction methods failed. ${errorDetails}. Last error: ${lastError?.message}`)
   } catch (error) {
     console.error('PDF extraction error:', error)
     throw error
@@ -56,7 +76,9 @@ async function extractWithPdfParse(buffer: Buffer) {
     }
   } catch (error) {
     console.error('pdf-parse failed:', error)
-    throw error
+    const enhancedError = error as any
+    enhancedError.method = 'pdf-parse'
+    throw enhancedError
   }
 }
 
@@ -119,7 +141,9 @@ async function extractWithPdfJs(buffer: Buffer) {
     }
   } catch (error) {
     console.error('PDF.js extraction failed:', error)
-    throw error
+    const enhancedError = error as any
+    enhancedError.method = 'pdfjs'
+    throw enhancedError
   }
 }
 
@@ -219,9 +243,13 @@ function isCleanText(text: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now()
+  
   try {
     const formData = await request.formData()
     const file = formData.get('pdf') as File
+    
+    console.log(`📄 Processing PDF: ${file?.name || 'unnamed'}, size: ${file?.size || 0} bytes`)
     
     if (!file) {
       return NextResponse.json(
@@ -232,7 +260,22 @@ export async function POST(request: NextRequest) {
 
     if (file.type !== 'application/pdf') {
       return NextResponse.json(
-        { error: 'File must be a PDF' },
+        { error: `Invalid file type: ${file.type}. File must be a PDF.` },
+        { status: 400 }
+      )
+    }
+
+    // Check file size limits
+    if (file.size === 0) {
+      return NextResponse.json(
+        { error: 'PDF file is empty (0 bytes)' },
+        { status: 400 }
+      )
+    }
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      return NextResponse.json(
+        { error: `PDF file too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum size is 5MB.` },
         { status: 400 }
       )
     }
@@ -245,6 +288,9 @@ export async function POST(request: NextRequest) {
     const data = await extractTextFromPDFRobust(buffer)
 
     const wordCount = data.text.split(/\s+/).filter(w => w.length > 0).length
+    const processingTime = Date.now() - startTime
+
+    console.log(`✅ PDF extraction successful: ${file.name}, ${wordCount} words, ${processingTime}ms, method: ${data.method}`)
 
     return NextResponse.json({
       text: data.text,
@@ -254,26 +300,57 @@ export async function POST(request: NextRequest) {
         words: wordCount,
         method: data.method,
         extractedPages: (data as any).extractedPages || data.pages || 1,
-        extractionFailed: (data as any).extractionFailed || false
+        processingTime: processingTime
       },
       metadata: { 
         extraction_method: data.method,
         file_size: buffer.length,
-        extraction_quality: (data as any).extractionFailed ? 'low' : wordCount > 100 ? 'high' : 'medium'
+        file_name: file.name,
+        extraction_quality: wordCount > 100 ? 'high' : wordCount > 20 ? 'medium' : 'low',
+        processing_time_ms: processingTime
       },
       pages: data.pages || 1,
       numpages: data.pages || 1
     })
 
   } catch (error: any) {
-    console.error('PDF extraction error:', error)
+    const processingTime = Date.now() - startTime
+    console.error(`❌ PDF extraction failed after ${processingTime}ms:`, error)
+    
+    // Provide specific error messages based on error type
+    let userMessage = 'Failed to extract text from PDF'
+    let statusCode = 500
+    
+    if (error.message.includes('corrupted')) {
+      userMessage = 'PDF file appears to be corrupted or damaged'
+      statusCode = 400
+    } else if (error.message.includes('encrypted')) {
+      userMessage = 'PDF file is password protected or encrypted'
+      statusCode = 400
+    } else if (error.message.includes('unsupported format')) {
+      userMessage = 'PDF format is not supported or contains only images'
+      statusCode = 400
+    } else if (error.message.includes('too large')) {
+      userMessage = 'PDF file is too large to process'
+      statusCode = 400
+    } else if (error.message.includes('timeout')) {
+      userMessage = 'PDF processing timed out - file may be too complex'
+      statusCode = 408
+    }
     
     return NextResponse.json(
       { 
-        error: 'Failed to extract text from PDF',
-        details: error.message 
+        error: userMessage,
+        details: error.message,
+        processing_time_ms: processingTime,
+        suggestions: [
+          'Ensure the PDF is not password protected',
+          'Try converting the PDF to a newer format',
+          'Check if the PDF contains searchable text (not just images)',
+          'Reduce file size if it\'s very large'
+        ]
       },
-      { status: 500 }
+      { status: statusCode }
     )
   }
 }

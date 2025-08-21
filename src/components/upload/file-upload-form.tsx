@@ -69,7 +69,7 @@ export function FileUploadForm() {
     accept: {
       'application/pdf': ['.pdf']
     },
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 5 * 1024 * 1024, // 5MB
     multiple: true
   })
 
@@ -95,8 +95,22 @@ export function FileUploadForm() {
       })
       
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'PDF extraction failed')
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = errorData.error || 'PDF extraction failed'
+        const suggestions = errorData.suggestions || []
+        
+        console.error(`PDF extraction failed for ${uploadFile.file.name}:`, errorMessage)
+        if (suggestions.length > 0) {
+          console.log('Suggestions:', suggestions)
+        }
+        
+        // Create a more detailed error message
+        let detailedError = errorMessage
+        if (suggestions.length > 0) {
+          detailedError += `\n\nSuggestions:\n• ${suggestions.join('\n• ')}`
+        }
+        
+        throw new Error(detailedError)
       }
       
       const extractionResult = await response.json()
@@ -351,7 +365,7 @@ export function FileUploadForm() {
                   Drag & drop PDF files here, or click to select
                 </p>
                 <p className="text-sm text-gray-500">
-                  Maximum file size: 10MB per file
+                  Maximum file size: 5MB per file
                 </p>
               </div>
             )}
