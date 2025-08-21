@@ -31,7 +31,12 @@ async function extractTextFromPDFRobust(buffer: Buffer) {
     let lastError: Error | null = null
     const failedMethods: string[] = []
 
-    for (const method of methods) {
+    for (let i = 0; i < methods.length; i++) {
+      const method = methods[i]
+      const methodName = ['pdf-parse', 'simple-parser', 'pdfjs', 'fallback'][i]
+      
+      console.log(`🔄 Trying extraction method ${i + 1}/${methods.length}: ${methodName}`)
+      
       try {
         const result = await method()
         
@@ -43,10 +48,11 @@ async function extractTextFromPDFRobust(buffer: Buffer) {
           console.log(`⚠️ Method ${result.method} returned poor quality text (length: ${result.text?.length || 0}), trying next method`)
           failedMethods.push(`${result.method} (poor quality)`)
         }
-      } catch (error) {
+      } catch (error: any) {
         lastError = error as Error
-        failedMethods.push(`${(error as any).method || 'unknown'} (${error.message})`)
-        console.warn('PDF extraction method failed:', error)
+        const errorMsg = `${methodName} (${error.message})`
+        failedMethods.push(errorMsg)
+        console.warn(`❌ Method ${methodName} failed:`, error.message)
         continue
       }
     }
@@ -65,8 +71,10 @@ async function extractTextFromPDFRobust(buffer: Buffer) {
 
 async function extractWithPdfParse(buffer: Buffer) {
   try {
-    const pdfParse = await import('pdf-parse')
-    const data = await pdfParse.default(buffer)
+    const pdfParseModule = await import('pdf-parse')
+    // Handle both default export and named export patterns
+    const pdfParse = pdfParseModule.default || pdfParseModule
+    const data = await pdfParse(buffer)
     
     return {
       text: data.text,
@@ -74,8 +82,9 @@ async function extractWithPdfParse(buffer: Buffer) {
       method: 'pdf-parse',
       info: data.info
     }
-  } catch (error) {
-    console.error('pdf-parse failed:', error)
+  } catch (error: any) {
+    console.error('pdf-parse failed:', error.message)
+    console.error('pdf-parse error stack:', error.stack)
     const enhancedError = error as any
     enhancedError.method = 'pdf-parse'
     throw enhancedError
@@ -290,10 +299,12 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now()
   
   try {
+    console.log('📥 PDF extraction API called')
+    
     const formData = await request.formData()
     const file = formData.get('pdf') as File
     
-    console.log(`📄 Processing PDF: ${file?.name || 'unnamed'}, size: ${file?.size || 0} bytes`)
+    console.log(`📄 Processing PDF: ${file?.name || 'unnamed'}, size: ${file?.size || 0} bytes, type: ${file?.type || 'unknown'}`)
     
     if (!file) {
       return NextResponse.json(
