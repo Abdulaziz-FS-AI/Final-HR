@@ -112,14 +112,15 @@ export function FileUploadForm() {
       
       // Store in database
       const { data: resume, error: dbError } = await supabase
-        .from('resumes')
+        .from('file_uploads')
         .insert({
           file_name: uploadFile.file.name,
           file_size: uploadFile.file.size,
           extracted_text: extractionResult.text,
           user_id: user.id,
           session_id: actualSessionId || sessionId,
-          extraction_metadata: extractionResult.metadata
+          extraction_metadata: extractionResult.metadata,
+          processing_status: 'completed'
         })
         .select()
         .single()
