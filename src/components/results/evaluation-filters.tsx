@@ -18,14 +18,14 @@ export function EvaluationFilters({ defaultRoleId, defaultSessionId }: Evaluatio
   const router = useRouter()
   const searchParams = useSearchParams()
   
-  const [selectedRole, setSelectedRole] = useState(defaultRoleId || '')
+  const [selectedRole, setSelectedRole] = useState(defaultRoleId || 'all')
   const [scoreRange, setScoreRange] = useState('all')
   const [sortBy, setSortBy] = useState('score_desc')
 
   const applyFilters = () => {
     const params = new URLSearchParams()
     
-    if (selectedRole) params.set('role', selectedRole)
+    if (selectedRole && selectedRole !== 'all') params.set('role', selectedRole)
     if (defaultSessionId) params.set('session', defaultSessionId)
     if (scoreRange !== 'all') params.set('score', scoreRange)
     if (sortBy !== 'score_desc') params.set('sort', sortBy)
@@ -34,7 +34,7 @@ export function EvaluationFilters({ defaultRoleId, defaultSessionId }: Evaluatio
   }
 
   const clearFilters = () => {
-    setSelectedRole('')
+    setSelectedRole('all')
     setScoreRange('all')
     setSortBy('score_desc')
     router.push('/dashboard/results')
@@ -68,7 +68,7 @@ export function EvaluationFilters({ defaultRoleId, defaultSessionId }: Evaluatio
                 <SelectValue placeholder="All roles" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All roles</SelectItem>
+                <SelectItem value="all">All roles</SelectItem>
                 {roles.map((role) => (
                   <SelectItem key={role.id} value={role.id}>
                     {role.title}

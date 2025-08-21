@@ -15,7 +15,7 @@ export function useRoles() {
   const { user } = useAuth()
   const { reportError } = useErrorMonitoring()
 
-  const fetchRoles = useCallback(async () => {
+  const fetchRoles = useCallback(async (includeInactive = false) => {
     if (!user?.id) {
       console.warn('No user ID available for fetching roles')
       setLoading(false)
@@ -44,8 +44,8 @@ export function useRoles() {
         console.log('   abdulaziz747uni@gmail.com has role with user_id: 1fb0a5c4-951d-43bd-8a76-489bf38daa62')
       }
       
-      // Now fetch user's roles
-      const { data, error } = await supabase
+      // Build query - include inactive roles if requested
+      let query = supabase
         .from('roles')
         .select(`
           *,
@@ -55,8 +55,12 @@ export function useRoles() {
           experience_requirements:role_experience_requirements(*)
         `)
         .eq('user_id', user.id)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
+
+      if (!includeInactive) {
+        query = query.eq('is_active', true)
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false })
 
       if (error) {
         console.error('Error fetching roles:', error)
@@ -199,16 +203,77 @@ export function useRoles() {
     if (!user) throw new Error('No user found')
     
     try {
+      // First check if role has evaluation sessions or results
+      const { data: sessions, error: sessionsError } = await supabase
+        .from('evaluation_sessions')
+        .select('id')
+        .eq('role_id', roleId)
+        .limit(1)
+
+      if (sessionsError) throw sessionsError
+
+      const { data: results, error: resultsError } = await supabase
+        .from('evaluation_results') 
+        .select('id')
+        .eq('role_id', roleId)
+        .limit(1)
+
+      if (resultsError) throw resultsError
+
+      // If there are evaluation sessions or results, only soft delete
+      if (sessions?.length > 0 || results?.length > 0) {
+        console.log('Role has evaluation data - performing soft delete')
+        const { error } = await supabase
+          .from('roles')
+          .update({ is_active: false })
+          .eq('id', roleId)
+          .eq('user_id', user.id)
+
+        if (error) throw error
+      } else {
+        // No evaluation data - safe to hard delete with cascade
+        console.log('Role has no evaluation data - performing hard delete')
+        
+        // Delete related data in correct order (children first)
+        await Promise.all([
+          supabase.from('role_skills').delete().eq('role_id', roleId),
+          supabase.from('role_questions').delete().eq('role_id', roleId),
+          supabase.from('role_education_requirements').delete().eq('role_id', roleId),
+          supabase.from('role_experience_requirements').delete().eq('role_id', roleId)
+        ])
+
+        // Finally delete the role
+        const { error } = await supabase
+          .from('roles')
+          .delete()
+          .eq('id', roleId)
+          .eq('user_id', user.id)
+
+        if (error) throw error
+      }
+
+      await fetchRoles()
+    } catch (err: any) {
+      console.error('Role deletion failed:', err)
+      throw new Error(`Failed to delete role: ${err.message}`)
+    }
+  }
+
+  const restoreRole = async (roleId: string) => {
+    if (!user) throw new Error('No user found')
+    
+    try {
       const { error } = await supabase
         .from('roles')
-        .update({ is_active: false })
+        .update({ is_active: true })
         .eq('id', roleId)
         .eq('user_id', user.id)
 
       if (error) throw error
       await fetchRoles()
     } catch (err: any) {
-      throw new Error(err.message)
+      console.error('Role restoration failed:', err)
+      throw new Error(`Failed to restore role: ${err.message}`)
     }
   }
 
@@ -248,6 +313,7 @@ export function useRoles() {
     error,
     createRole,
     deleteRole,
+    restoreRole,
     getRoleById,
     refreshRoles: fetchRoles,
   }
