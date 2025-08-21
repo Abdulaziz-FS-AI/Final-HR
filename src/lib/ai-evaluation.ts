@@ -66,7 +66,6 @@ export class AIEvaluationService {
         .from('file_uploads')
         .select('*')
         .eq('session_id', sessionId)
-        .eq('processing_status', 'completed')
         .not('extracted_text', 'is', null)
 
       if (error) throw error

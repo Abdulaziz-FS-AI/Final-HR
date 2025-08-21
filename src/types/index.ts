@@ -12,7 +12,6 @@ export type UploadSession = Tables<'upload_sessions'>
 export type FileUpload = Tables<'file_uploads'>
 export type EvaluationSession = Tables<'evaluation_sessions'>
 export type EvaluationResult = Tables<'evaluation_results'>
-export type ProcessingQueue = Tables<'processing_queue'>
 export type AnalyticsEvent = Tables<'analytics_events'>
 
 // Insert types

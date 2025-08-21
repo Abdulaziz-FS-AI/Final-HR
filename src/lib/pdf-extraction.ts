@@ -59,7 +59,6 @@ export class PDFExtractionService {
           file_size: file.size,
           mime_type: file.type,
           file_code: extractionId,
-          processing_status: 'processing',
           upload_status: 'uploading',
           uploaded_at: new Date().toISOString()
         })
@@ -75,7 +74,6 @@ export class PDFExtractionService {
       await supabase
         .from('file_uploads')
         .update({
-          processing_status: 'processing',
           upload_status: 'uploaded',
           storage_url: pdfUrl
         })
@@ -98,7 +96,6 @@ export class PDFExtractionService {
       await supabase
         .from('file_uploads')
         .update({
-          processing_status: 'completed',
           extracted_text: extractedData.text,
           extracted_metadata: {
             method: extractedData.method,
@@ -107,7 +104,6 @@ export class PDFExtractionService {
             qualityCheck
           },
           extraction_confidence: qualityCheck.confidence,
-          extraction_duration_ms: Date.now() - startTime,
           extraction_method: extractedData.method,
           word_count: extractedData.wordCount,
           character_count: extractedData.text.length,
@@ -120,19 +116,11 @@ export class PDFExtractionService {
           extracted_phone: qualityCheck.phone,
           extracted_name: qualityCheck.name,
           quality_score: qualityCheck.score,
-          quality_issues: qualityCheck.issues.length > 0 ? qualityCheck.issues : null
+          quality_issues: qualityCheck.issues.length > 0 ? qualityCheck.issues : null,
+          processed_at: new Date().toISOString()
         })
         .eq('id', fileRecord.id)
       
-      // Step 11: Queue for AI evaluation
-      await this.queueForEvaluation(fileRecord.id, sessionId, priority)
-      
-      // Step 12: Trigger queue processing (async, don't wait)
-      // This is non-critical - if it fails, the queue will be processed later
-      this.triggerQueueProcessing().catch(error => {
-        console.warn('Queue processing trigger failed (non-critical):', error.message)
-        // Queue will be processed on next upload or manual trigger
-      })
       
       return {
         success: true,
@@ -325,7 +313,6 @@ Cloud: AWS, Docker, Kubernetes
       .from('file_uploads')
       .select('*')
       .eq('user_id', userId)
-      .eq('processing_status', 'completed')
       .not('extracted_text', 'is', null)
       .order('uploaded_at', { ascending: false })
       .limit(50) // Check recent uploads
@@ -355,10 +342,10 @@ Cloud: AWS, Docker, Kubernetes
         storage_path: existing.storage_path,
         file_size: existing.file_size,
         mime_type: existing.mime_type,
-        processing_status: 'completed',
         extracted_text: existing.extracted_text,
         is_duplicate: true,
-        duplicate_of: existing.id
+        duplicate_of: existing.id,
+        processed_at: new Date().toISOString()
       })
       .select()
       .single()
@@ -387,52 +374,4 @@ Cloud: AWS, Docker, Kubernetes
     return `PDF-${year}${month}-${random}`
   }
   
-  /**
-   * Queue for AI evaluation
-   */
-  private async queueForEvaluation(
-    fileId: string,
-    sessionId: string,
-    priority: number
-  ): Promise<void> {
-    await supabase
-      .from('processing_queue')
-      .insert({
-        file_id: fileId,
-        session_id: sessionId,
-        item_type: 'evaluation',
-        priority: priority,
-        status: 'pending',
-        created_at: new Date().toISOString()
-      })
-  }
-
-  /**
-   * Trigger queue processing (async)
-   * This is a best-effort operation - failures are non-critical
-   */
-  private async triggerQueueProcessing(): Promise<void> {
-    try {
-      // Call the queue processing API
-      const response = await fetch('/api/process-queue', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (!response.ok) {
-        // Log but don't throw - queue processing is async and non-critical
-        console.warn(`Queue processing API returned ${response.status} - queue will be processed later`)
-        return
-      }
-
-      const result = await response.json()
-      console.log('Queue processing triggered:', result.message)
-    } catch (error) {
-      // Network errors or other issues - log but don't throw
-      console.warn('Queue processing trigger failed:', error)
-      // The queue will be processed on the next successful trigger
-    }
-  }
 }
