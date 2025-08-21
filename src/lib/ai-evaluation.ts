@@ -353,38 +353,6 @@ Respond with ONLY the JSON object, no additional text.`
   }
 
   /**
-   * Call Hyperbolic API for AI evaluation
-   */
-  private async callHyperbolicAPI(prompt: string): Promise<string> {
-    try {
-      const response = await fetch('/api/ai-evaluate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt })
-      })
-
-      if (!response.ok) {
-        throw new Error(`AI evaluation API error: ${response.status} ${response.statusText}`)
-      }
-
-      const data = await response.json()
-      
-      if (!data.success || !data.content) {
-        throw new Error(data.error || 'Invalid response from AI service')
-      }
-
-      return data.content
-
-    } catch (error: any) {
-      console.error('AI evaluation API call failed:', error)
-      throw new Error(`AI evaluation failed: ${error.message}`)
-    }
-  }
-
-
-  /**
    * Parse and validate AI response
    */
   private parseAIResponse(aiResponse: string, role: RoleWithDetails): AIEvaluationResponse {
@@ -474,15 +442,14 @@ Respond with ONLY the JSON object, no additional text.`
           penalty_points: evaluation.penalty_points,
           skills_score: evaluation.skills_score,
           questions_score: evaluation.questions_score,
-          ai_confidence: Math.min(100, Math.max(0, evaluation.ai_confidence)), // Ensure 0-100 range
+          ai_confidence: evaluation.ai_confidence,
           ai_model_used: 'openai/gpt-oss-120b',
-          status: evaluation.overall_score >= 60 ? 'QUALIFIED' : 'REJECTED', // Use uppercase
+          status: evaluation.overall_score >= 60 ? 'QUALIFIED' : 'REJECTED',
           match_level: evaluation.overall_score >= 90 ? 'PERFECT' : 
                       evaluation.overall_score >= 80 ? 'STRONG' : 
                       evaluation.overall_score >= 70 ? 'GOOD' : 
-                      evaluation.overall_score >= 60 ? 'FAIR' : 'POOR', // Use uppercase
+                      evaluation.overall_score >= 60 ? 'FAIR' : 'POOR',
           evaluated_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
           table_view: {
             candidate_name: evaluation.candidate_name,
             overall_score: evaluation.overall_score,
@@ -508,19 +475,8 @@ Respond with ONLY the JSON object, no additional text.`
 
       if (error) {
         console.error('Failed to save evaluation results:', error)
-        
-        // Update failed count in session
-        await supabase.rpc('increment_failed_resumes', { 
-          session_id: sessionId 
-        }).catch(console.error)
-        
         throw error
       }
-
-      // Update successful evaluation count in session
-      await supabase.rpc('increment_processed_resumes', { 
-        session_id: sessionId 
-      }).catch(console.error)
 
       // Update processing queue status
       await supabase
@@ -537,73 +493,6 @@ Respond with ONLY the JSON object, no additional text.`
     }
   }
 
-  /**
-   * Get or create evaluation session
-   */
-  private async getOrCreateEvaluationSession(roleId: string): Promise<string> {
-    const userId = (await supabase.auth.getUser()).data.user?.id
-
-    if (!userId) {
-      throw new Error('User not authenticated')
-    }
-
-    // Try to find existing active session (pending or processing)
-    const { data: existingSession } = await supabase
-      .from('evaluation_sessions')
-      .select('id')
-      .eq('role_id', roleId)
-      .eq('user_id', userId)
-      .in('status', ['pending', 'processing'])
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    if (existingSession) {
-      return existingSession.id
-    }
-
-    // Get role details for snapshot
-    const role = await this.getRoleDetails(roleId)
-    if (!role) {
-      throw new Error('Role not found for session creation')
-    }
-
-    // Create minimal role snapshot
-    const roleSnapshot = {
-      id: role.id,
-      title: role.title,
-      description: role.description,
-      skills: role.skills?.map(s => ({
-        skill_name: s.skill_name,
-        weight: s.weight,
-        is_required: s.is_required
-      })) || [],
-      questions: role.questions?.map(q => ({
-        question_text: q.question_text,
-        weight: q.weight
-      })) || []
-    }
-
-    // Create new session
-    const { data: newSession, error } = await supabase
-      .from('evaluation_sessions')
-      .insert({
-        role_id: roleId,
-        user_id: userId,
-        session_name: `Evaluation ${new Date().toLocaleDateString()}`,
-        status: 'pending',
-        total_resumes: 0,
-        role_snapshot: roleSnapshot
-      })
-      .select('id')
-      .single()
-
-    if (error) {
-      throw error
-    }
-
-    return newSession.id
-  }
 
   /**
    * Extract contact information from resume text
@@ -624,6 +513,8 @@ Respond with ONLY the JSON object, no additional text.`
    */
   async processQueue(): Promise<void> {
     try {
+      const supabase = createAdminClient()
+      
       // Get pending items from queue with session info
       const { data: queueItems, error } = await supabase
         .from('processing_queue')
@@ -670,6 +561,7 @@ Respond with ONLY the JSON object, no additional text.`
    * Process individual queue item
    */
   private async processQueueItem(item: any): Promise<void> {
+    const supabase = createAdminClient()
     const file = item.file
     
     if (!file?.extracted_text) {

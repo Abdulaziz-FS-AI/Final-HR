@@ -1,5 +1,5 @@
 // This file contains the generated TypeScript types from Supabase
-// Generated on: 2025-08-19
+// Generated on: 2025-08-21
 // Keep this file updated by running: npx supabase gen types typescript
 
 export type Json =
@@ -60,6 +60,7 @@ export type Database = {
           candidate_email: string | null
           candidate_name: string | null
           candidate_phone: string | null
+          created_at: string | null
           education_score: number | null
           evaluated_at: string | null
           expanded_view: Json
@@ -74,10 +75,12 @@ export type Database = {
           questions_score: number | null
           review_notes: string | null
           reviewed_at: string | null
+          role_id: string | null
           session_id: string
           skills_score: number | null
           status: string
           table_view: Json
+          user_id: string | null
         }
         Insert: {
           ai_confidence?: number | null
@@ -88,6 +91,7 @@ export type Database = {
           candidate_email?: string | null
           candidate_name?: string | null
           candidate_phone?: string | null
+          created_at?: string | null
           education_score?: number | null
           evaluated_at?: string | null
           expanded_view: Json
@@ -102,10 +106,12 @@ export type Database = {
           questions_score?: number | null
           review_notes?: string | null
           reviewed_at?: string | null
+          role_id?: string | null
           session_id: string
           skills_score?: number | null
           status: string
           table_view: Json
+          user_id?: string | null
         }
         Update: {
           ai_confidence?: number | null
@@ -116,6 +122,7 @@ export type Database = {
           candidate_email?: string | null
           candidate_name?: string | null
           candidate_phone?: string | null
+          created_at?: string | null
           education_score?: number | null
           evaluated_at?: string | null
           expanded_view?: Json
@@ -130,10 +137,12 @@ export type Database = {
           questions_score?: number | null
           review_notes?: string | null
           reviewed_at?: string | null
+          role_id?: string | null
           session_id?: string
           skills_score?: number | null
           status?: string
           table_view?: Json
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -144,10 +153,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "evaluation_results_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "evaluation_results_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "evaluation_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_results_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -271,6 +294,7 @@ export type Database = {
           stored_name: string
           upload_status: string | null
           uploaded_at: string | null
+          user_id: string | null
           word_count: number | null
         }
         Insert: {
@@ -324,6 +348,7 @@ export type Database = {
           stored_name: string
           upload_status?: string | null
           uploaded_at?: string | null
+          user_id?: string | null
           word_count?: number | null
         }
         Update: {
@@ -377,6 +402,7 @@ export type Database = {
           stored_name?: string
           upload_status?: string | null
           uploaded_at?: string | null
+          user_id?: string | null
           word_count?: number | null
         }
         Relationships: [
@@ -398,7 +424,14 @@ export type Database = {
             foreignKeyName: "file_uploads_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
-            referencedRelation: "upload_sessions"
+            referencedRelation: "evaluation_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "file_uploads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -838,6 +871,14 @@ export type Database = {
       get_current_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      increment_failed_resumes: {
+        Args: { session_id: string }
+        Returns: undefined
+      }
+      increment_processed_resumes: {
+        Args: { session_id: string }
+        Returns: undefined
       }
       test_auth_uid: {
         Args: Record<PropertyKey, never>

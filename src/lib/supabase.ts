@@ -1,6 +1,7 @@
 'use client'
 
-import { createBrowserClient, createClient } from '@supabase/ssr'
+import { createBrowserClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database-generated'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
