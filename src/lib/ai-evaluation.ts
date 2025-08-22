@@ -283,11 +283,17 @@ ${resumeText}
 
     let prompt = ''
     
-    // Bonus Configuration
+    // Bonus Configuration - safely handle different data types
     if (role.bonus_config) {
-      const bonusConfig = typeof role.bonus_config === 'string' 
-        ? JSON.parse(role.bonus_config) 
-        : role.bonus_config
+      let bonusConfig: any
+      try {
+        bonusConfig = typeof role.bonus_config === 'string' 
+          ? JSON.parse(role.bonus_config) 
+          : role.bonus_config
+      } catch (e) {
+        console.error('Failed to parse bonus_config:', e)
+        bonusConfig = {}
+      }
 
       prompt += '**QUALITY BONUSES:**\n'
       
@@ -335,11 +341,17 @@ ${resumeText}
       }
     }
 
-    // Penalty Configuration  
+    // Penalty Configuration - safely handle different data types
     if (role.penalty_config) {
-      const penaltyConfig = typeof role.penalty_config === 'string'
-        ? JSON.parse(role.penalty_config)
-        : role.penalty_config
+      let penaltyConfig: any
+      try {
+        penaltyConfig = typeof role.penalty_config === 'string'
+          ? JSON.parse(role.penalty_config)
+          : role.penalty_config
+      } catch (e) {
+        console.error('Failed to parse penalty_config:', e)
+        penaltyConfig = {}
+      }
 
       prompt += '\n**RISK PENALTIES:**\n'
       
@@ -376,7 +388,7 @@ ${resumeText}
   /**
    * Parse and validate AI response
    */
-  private parseAIResponse(aiResponse: string, role: RoleWithDetails): AIEvaluationResponse {
+  private parseAIResponse(aiResponse: string, _role: RoleWithDetails): AIEvaluationResponse {
     try {
       // Clean the response to extract JSON
       let jsonStr = aiResponse.trim()
@@ -408,10 +420,21 @@ ${resumeText}
       const evaluation: AIEvaluationResponse = {
         candidate_name: parsed.candidate_name || 'Unknown Candidate',
         overall_score: Math.max(0, Math.min(100, parsed.overall_score || 0)),
+        base_score: parsed.base_score || parsed.overall_score || 0,
         skills_score: Math.max(0, Math.min(100, parsed.skills_score || 0)),
         questions_score: Math.max(0, Math.min(100, parsed.questions_score || 0)),
         bonus_points: parsed.bonus_points || 0,
         penalty_points: parsed.penalty_points || 0,
+        bonus_breakdown: parsed.bonus_breakdown || {
+          education_bonus: 0,
+          company_bonus: 0,
+          projects_bonus: 0,
+          certifications_bonus: 0
+        },
+        penalty_breakdown: parsed.penalty_breakdown || {
+          job_stability_penalty: 0,
+          employment_gap_penalty: 0
+        },
         skills_analysis: Array.isArray(parsed.skills_analysis) ? parsed.skills_analysis : [],
         questions_analysis: Array.isArray(parsed.questions_analysis) ? parsed.questions_analysis : [],
         recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
@@ -424,21 +447,38 @@ ${resumeText}
 
     } catch (error) {
       console.error('Failed to parse AI response:', error)
-      // Return default evaluation on parse error
-      return {
+      console.error('Raw AI response was:', aiResponse.substring(0, 1000))
+      
+      // Instead of returning a failed evaluation with score 0,
+      // throw an error to prevent saving bad data
+      throw new Error('AI response parsing failed. The evaluation cannot be completed.')
+      
+      // Original fallback kept as comment for reference:
+      /*return {
         candidate_name: 'Parse Error',
         overall_score: 0,
+        base_score: 0,
         skills_score: 0,
         questions_score: 0,
         bonus_points: 0,
         penalty_points: 0,
+        bonus_breakdown: {
+          education_bonus: 0,
+          company_bonus: 0,
+          projects_bonus: 0,
+          certifications_bonus: 0
+        },
+        penalty_breakdown: {
+          job_stability_penalty: 0,
+          employment_gap_penalty: 0
+        },
         skills_analysis: [],
         questions_analysis: [],
         recommendations: ['AI response parsing failed - manual review required'],
         red_flags: ['Unable to process AI evaluation'],
         analysis_summary: 'AI evaluation parsing failed. Manual review required.',
         ai_confidence: 0
-      }
+      }*/
     }
   }
 
@@ -453,14 +493,27 @@ ${resumeText}
       const supabase = createAdminClient()
       
       // Get file details to extract session_id and user_id
-      const { data: fileData } = await supabase
+      const { data: fileData, error: fileError } = await supabase
         .from('file_uploads')
         .select('session_id, user_id')
         .eq('id', request.fileId)
         .single()
       
-      if (!fileData) {
-        throw new Error('File not found')
+      if (fileError || !fileData) {
+        console.error('Failed to get file data:', fileError)
+        throw new Error('File not found or inaccessible')
+      }
+      
+      // Validate session_id exists
+      if (!fileData.session_id) {
+        console.error('File has no session_id:', request.fileId)
+        throw new Error('File is not associated with an evaluation session')
+      }
+      
+      // Validate user_id exists
+      if (!fileData.user_id) {
+        console.error('File has no user_id:', request.fileId)
+        throw new Error('File is not associated with a user')
       }
 
       // Extract candidate contact info from AI evaluation (more reliable than regex)
@@ -479,7 +532,12 @@ ${resumeText}
         .single()
 
       // Calculate status with role-specific thresholds
-      const qualificationThreshold = roleConfig?.bonus_config?.qualificationThreshold || 60
+      // Safely access nested config with proper type checking
+      let qualificationThreshold = 60
+      if (roleConfig?.bonus_config && typeof roleConfig.bonus_config === 'object' && !Array.isArray(roleConfig.bonus_config)) {
+        const config = roleConfig.bonus_config as any
+        qualificationThreshold = config.qualificationThreshold || 60
+      }
       const status = evaluation.overall_score >= qualificationThreshold ? 'QUALIFIED' : 'REJECTED'
       
       // Calculate match level with role-specific ranges
@@ -490,8 +548,8 @@ ${resumeText}
         .from('evaluation_results')
         .insert({
           file_id: request.fileId,
-          session_id: fileData.session_id,
-          user_id: fileData.user_id,
+          session_id: fileData.session_id!, // Already validated above
+          user_id: fileData.user_id!, // Already validated above
           role_id: request.roleId,
           candidate_name: evaluation.candidate_name,
           candidate_email: candidateEmail,
@@ -521,13 +579,21 @@ ${resumeText}
           // Store complete detailed analysis in expanded_view
           expanded_view: {
             base_score: evaluation.base_score || evaluation.overall_score,
-            skills_analysis: evaluation.skills_analysis,
-            questions_analysis: evaluation.questions_analysis,
-            bonus_breakdown: evaluation.bonus_breakdown || {},
-            penalty_breakdown: evaluation.penalty_breakdown || {},
-            recommendations: evaluation.recommendations,
-            red_flags: evaluation.red_flags,
-            analysis_summary: evaluation.analysis_summary,
+            skills_analysis: evaluation.skills_analysis || [],
+            questions_analysis: evaluation.questions_analysis || [],
+            bonus_breakdown: evaluation.bonus_breakdown || {
+              education_bonus: 0,
+              company_bonus: 0,
+              projects_bonus: 0,
+              certifications_bonus: 0
+            },
+            penalty_breakdown: evaluation.penalty_breakdown || {
+              job_stability_penalty: 0,
+              employment_gap_penalty: 0
+            },
+            recommendations: evaluation.recommendations || [],
+            red_flags: evaluation.red_flags || [],
+            analysis_summary: evaluation.analysis_summary || 'No analysis provided',
             contact_info: {
               email: candidateEmail,
               phone: candidatePhone
@@ -551,8 +617,9 @@ ${resumeText}
    * Extract contact information from resume text
    * Pure text extraction - no parsing, let AI handle everything
    */
-  private extractContactInfo(resumeText: string): any {
+  private extractContactInfo(_resumeText: string): any {
     // Pure text extraction only - AI will do all parsing
+    // Resume text is intentionally not used here as AI handles extraction
     return {
       name: null,
       email: null, 
@@ -600,8 +667,11 @@ ${resumeText}
    * Calculate education score from bonus breakdown
    */
   private calculateEducationScore(evaluation: AIEvaluationResponse): number {
-    const educationBonus = evaluation.bonus_breakdown?.education_bonus || 0
+    // Safely access bonus_breakdown with null check
+    const educationBonus = evaluation.bonus_breakdown?.education_bonus ?? 0
     // Convert bonus points to percentage score (max 15 bonus = 100%)
+    // Ensure we don't divide by zero and cap at 100
+    if (educationBonus <= 0) return 0
     return Math.min(100, Math.round((educationBonus / 15) * 100))
   }
 
@@ -613,10 +683,12 @@ ${resumeText}
     let experienceFactors = 0
     
     // Check questions related to experience
-    for (const question of evaluation.questions_analysis || []) {
-      if (question.question.toLowerCase().includes('experience') || 
-          question.question.toLowerCase().includes('years') ||
-          question.question.toLowerCase().includes('worked')) {
+    const questionsAnalysis = evaluation.questions_analysis || []
+    for (const question of questionsAnalysis) {
+      const questionText = question.question?.toLowerCase() || ''
+      if (questionText.includes('experience') || 
+          questionText.includes('years') ||
+          questionText.includes('worked')) {
         if (question.answer === 'YES') {
           experienceScore += question.quality === 'HIGH' ? 100 : question.quality === 'MEDIUM' ? 70 : 40
         }
@@ -624,8 +696,8 @@ ${resumeText}
       }
     }
     
-    // Check company bonus (indicates good experience)
-    const companyBonus = evaluation.bonus_breakdown?.company_bonus || 0
+    // Safely check company bonus (indicates good experience)
+    const companyBonus = evaluation.bonus_breakdown?.company_bonus ?? 0
     if (companyBonus > 0) {
       experienceScore += Math.min(100, (companyBonus / 20) * 100)
       experienceFactors++
