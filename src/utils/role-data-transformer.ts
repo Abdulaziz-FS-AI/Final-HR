@@ -41,9 +41,10 @@ export function transformRoleFormData(
     
     // REMOVED education_requirements and experience_requirements - they go in separate tables
     
-    // Bonus/penalty configurations (cast to Json type)
-    bonus_config: formData.bonus_config as any,
-    penalty_config: formData.penalty_config as any,
+    // Optimize bonus/penalty configurations for Brave browser compatibility
+    // Compress large config objects to reduce payload size
+    bonus_config: compressBonusConfig(formData.bonus_config),
+    penalty_config: compressPenaltyConfig(formData.penalty_config),
     
     // DATABASE WILL HANDLE TIMESTAMPS AUTOMATICALLY
     is_active: true
@@ -278,4 +279,91 @@ export function createUserSummary(
   parts.push(`🤖 Processing complexity: ${summary.estimatedProcessingComplexity}`)
   
   return parts.join('\n')
+}
+
+/**
+ * Compress bonus configuration to reduce payload size for Brave browser compatibility
+ */
+function compressBonusConfig(bonusConfig: any): any {
+  if (!bonusConfig) return null
+  
+  // Create a lightweight version that preserves functionality but reduces size
+  const compressed: any = {}
+  
+  // Preferred Education - compress university lists
+  if (bonusConfig.preferredEducation?.enabled) {
+    compressed.education = {
+      enabled: true,
+      universities: bonusConfig.preferredEducation.specificUniversities?.slice(0, 10) || [], // Limit to 10
+      categories: {
+        topLeague: bonusConfig.preferredEducation.categories?.topLeague || false,
+        top50: bonusConfig.preferredEducation.categories?.top50Global || false,
+        top100: bonusConfig.preferredEducation.categories?.top100Global || false,
+        regional: bonusConfig.preferredEducation.categories?.regionalTop || false
+      }
+    }
+  }
+  
+  // Preferred Companies - compress company lists
+  if (bonusConfig.preferredCompanies?.enabled) {
+    compressed.companies = {
+      enabled: true,
+      list: bonusConfig.preferredCompanies.specificCompanies?.slice(0, 20) || [], // Limit to 20
+      categories: {
+        faang: bonusConfig.preferredCompanies.categories?.faangTech || false,
+        unicorns: bonusConfig.preferredCompanies.categories?.unicorns || false,
+        fortune500: bonusConfig.preferredCompanies.categories?.fortune500 || false,
+        industry: bonusConfig.preferredCompanies.categories?.industryLeaders || false,
+        competitors: bonusConfig.preferredCompanies.categories?.directCompetitors || false
+      }
+    }
+  }
+  
+  // Related Projects - keep description but limit size
+  if (bonusConfig.relatedProjects?.enabled) {
+    compressed.projects = {
+      enabled: true,
+      description: bonusConfig.relatedProjects.idealProjectDescription?.substring(0, 500) || '', // Limit to 500 chars
+      maxProjects: bonusConfig.relatedProjects.maxProjects || 5
+    }
+  }
+  
+  // Valuable Certifications - compress certification lists
+  if (bonusConfig.valuableCertifications?.enabled) {
+    compressed.certifications = {
+      enabled: true,
+      list: bonusConfig.valuableCertifications.certifications?.slice(0, 15) || [], // Limit to 15
+      maxCerts: bonusConfig.valuableCertifications.maxCertifications || 15
+    }
+  }
+  
+  return Object.keys(compressed).length > 0 ? compressed : null
+}
+
+/**
+ * Compress penalty configuration to reduce payload size for Brave browser compatibility
+ */
+function compressPenaltyConfig(penaltyConfig: any): any {
+  if (!penaltyConfig) return null
+  
+  const compressed: any = {}
+  
+  // Job Stability Check - keep only essential data
+  if (penaltyConfig.jobStabilityCheck?.enabled) {
+    compressed.jobStability = {
+      enabled: true,
+      concern: penaltyConfig.jobStabilityCheck.jobHoppingConcern || 'moderate'
+    }
+  }
+  
+  // Employment Gap Check - keep only essential data
+  if (penaltyConfig.employmentGapCheck?.enabled) {
+    compressed.employmentGap = {
+      enabled: true,
+      threshold: penaltyConfig.employmentGapCheck.gapThreshold || '1year',
+      penalty: penaltyConfig.employmentGapCheck.gapPenalty || 10
+    }
+  }
+  
+  return Object.keys(compressed).length > 0 ? compressed : null
 }

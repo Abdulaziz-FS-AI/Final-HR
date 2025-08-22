@@ -26,23 +26,7 @@ export function useRoles() {
       setLoading(true)
       setError(null)
       
-      // Debug: Log the user ID being used
-      console.log('🔍 IMPORTANT: Currently logged in as:')
-      console.log('   Email:', user.email)
-      console.log('   User ID:', user.id)
-      console.log('-----------------------------------')
-      
-      // Get session info
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (session?.user) {
-        console.log('✅ Session confirmed for:', session.user.email)
-        
-        // Show which roles belong to which account
-        console.log('📋 Role ownership:')
-        console.log('   abdulaziz.fs.ai@gmail.com has role with user_id: 632687b6-01e7-4a5e-9230-95e5d3a7540c')
-        console.log('   abdulaziz747uni@gmail.com has role with user_id: 1fb0a5c4-951d-43bd-8a76-489bf38daa62')
-      }
+      console.log('🔍 Fetching roles for user:', user.email)
       
       // Build query - include inactive roles if requested
       let query = supabase
@@ -80,12 +64,9 @@ export function useRoles() {
   }, [user])
 
   const createRole = async (roleData: RoleFormData) => {
-    // Validation
-    console.log('🔐 Current auth state:', { 
-      hasUser: !!user, 
-      userId: user?.id,
-      userEmail: user?.email 
-    })
+    // Add timeout to prevent hanging requests in Brave browser
+    const createRoleWithTimeout = async () => {
+    console.log('🔐 Creating role for user:', user?.email)
     
     if (!user?.id) throw new Error('Authentication required. Please log in.')
 
@@ -120,17 +101,7 @@ export function useRoles() {
     let createdRoleId: string | null = null
 
     try {
-      // Debug: Check auth state before insert
-      const { data: { session } } = await supabase.auth.getSession()
-      console.log('🔒 Auth check before insert:', {
-        hasSession: !!session,
-        sessionUserId: session?.user?.id,
-        sessionEmail: session?.user?.email,
-        tokenValid: session?.expires_at ? new Date(session.expires_at * 1000) > new Date() : false
-      })
-      
-      // Debug: Log the data being inserted
-      console.log('📤 Attempting to insert role with data:', transformedData.roleData)
+      console.log('📤 Creating role:', transformedData.roleData.title)
       
       // Create role with simplified error handling
       const { data: roleResult, error: roleError } = await supabase
@@ -149,52 +120,103 @@ export function useRoles() {
       
       createdRoleId = roleResult.id
       
-      // Step 2: Insert skills in parallel
-      const insertPromises: Promise<any>[] = []
+      // Step 2: Insert related data sequentially (Brave browser friendly)
+      // Sequential inserts prevent Brave from blocking multiple simultaneous requests
+      console.log('✅ Role created successfully, now adding related data...')
       
-      if (transformedData.skillsData?.length > 0) {
-        const skillsWithRoleId = transformedData.skillsData.map(skill => ({
-          ...skill,
-          role_id: createdRoleId
-        }))
-        insertPromises.push(
-          supabase.from('role_skills').insert(skillsWithRoleId)
-        )
-      }
+      const insertedData: string[] = []
       
-      if (transformedData.questionsData?.length > 0) {
-        const questionsWithRoleId = transformedData.questionsData.map(question => ({
-          ...question,
-          role_id: createdRoleId
-        }))
-        insertPromises.push(
-          supabase.from('role_questions').insert(questionsWithRoleId)
-        )
-      }
-      
-      if (transformedData.educationData?.length > 0) {
-        const educationWithRoleId = transformedData.educationData.map(edu => ({
-          ...edu,
-          role_id: createdRoleId
-        }))
-        insertPromises.push(
-          supabase.from('role_education_requirements').insert(educationWithRoleId)
-        )
-      }
-      
-      if (transformedData.experienceData?.length > 0) {
-        const experienceWithRoleId = transformedData.experienceData.map(exp => ({
-          ...exp,
-          role_id: createdRoleId
-        }))
-        insertPromises.push(
-          supabase.from('role_experience_requirements').insert(experienceWithRoleId)
-        )
-      }
-      
-      // Execute all inserts in parallel
-      if (insertPromises.length > 0) {
-        await Promise.all(insertPromises)
+      try {
+        // Insert skills
+        if (transformedData.skillsData?.length > 0) {
+          console.log('📊 Inserting skills...')
+          const skillsWithRoleId = transformedData.skillsData.map(skill => ({
+            ...skill,
+            role_id: createdRoleId
+          }))
+          const { error: skillsError } = await supabase
+            .from('role_skills')
+            .insert(skillsWithRoleId)
+          
+          if (skillsError) {
+            console.error('Skills insert failed:', skillsError)
+            throw new Error(`Failed to add skills: ${skillsError.message}`)
+          }
+          insertedData.push('skills')
+          console.log('✅ Skills added successfully')
+        }
+        
+        // Insert questions
+        if (transformedData.questionsData?.length > 0) {
+          console.log('❓ Inserting questions...')
+          const questionsWithRoleId = transformedData.questionsData.map(question => ({
+            ...question,
+            role_id: createdRoleId
+          }))
+          const { error: questionsError } = await supabase
+            .from('role_questions')
+            .insert(questionsWithRoleId)
+          
+          if (questionsError) {
+            console.error('Questions insert failed:', questionsError)
+            throw new Error(`Failed to add questions: ${questionsError.message}`)
+          }
+          insertedData.push('questions')
+          console.log('✅ Questions added successfully')
+        }
+        
+        // Insert education requirements
+        if (transformedData.educationData?.length > 0) {
+          console.log('🎓 Inserting education requirements...')
+          const educationWithRoleId = transformedData.educationData.map(edu => ({
+            ...edu,
+            role_id: createdRoleId
+          }))
+          const { error: educationError } = await supabase
+            .from('role_education_requirements')
+            .insert(educationWithRoleId)
+          
+          if (educationError) {
+            console.error('Education requirements insert failed:', educationError)
+            throw new Error(`Failed to add education requirements: ${educationError.message}`)
+          }
+          insertedData.push('education')
+          console.log('✅ Education requirements added successfully')
+        }
+        
+        // Insert experience requirements
+        if (transformedData.experienceData?.length > 0) {
+          console.log('💼 Inserting experience requirements...')
+          const experienceWithRoleId = transformedData.experienceData.map(exp => ({
+            ...exp,
+            role_id: createdRoleId
+          }))
+          const { error: experienceError } = await supabase
+            .from('role_experience_requirements')
+            .insert(experienceWithRoleId)
+          
+          if (experienceError) {
+            console.error('Experience requirements insert failed:', experienceError)
+            throw new Error(`Failed to add experience requirements: ${experienceError.message}`)
+          }
+          insertedData.push('experience')
+          console.log('✅ Experience requirements added successfully')
+        }
+        
+        console.log(`🎉 Role creation completed! Added: ${insertedData.join(', ')}`)
+        
+      } catch (relatedDataError: any) {
+        console.error('Failed to insert related data:', relatedDataError)
+        // Don't delete the role - partial success is better than total failure
+        // User can edit the role later to add missing components
+        console.warn('⚠️ Role created but some related data failed. User can edit role to complete setup.')
+        
+        // Still refresh and return success - role exists
+        await fetchRoles()
+        return { 
+          id: createdRoleId!,
+          warning: `Role created but some components failed: ${relatedDataError.message}. You can edit the role to complete setup.`
+        }
       }
 
       // Refresh roles list
@@ -204,20 +226,61 @@ export function useRoles() {
       return { id: createdRoleId! }
 
     } catch (error: any) {
-      // Cleanup if role was partially created
-      if (createdRoleId) {
+      console.error('❌ Role creation failed:', error)
+      
+      // Only cleanup if the main role creation failed
+      // If role was created but related data failed, we don't delete it
+      if (createdRoleId && error.message?.includes('Failed to create role:')) {
+        console.log('🧹 Cleaning up failed role creation...')
         await supabase
           .from('roles')
           .delete()
           .eq('id', createdRoleId)
-          .catch(() => {}) // Ignore cleanup errors
+          .catch((cleanupError) => {
+            console.error('Cleanup failed:', cleanupError)
+          })
       }
       
-      // Report error
+      // Report error with better context
+      const errorContext = {
+        stage: createdRoleId ? 'related_data_insert' : 'role_insert',
+        roleId: createdRoleId,
+        userId: user.id,
+        errorType: error.name || 'UnknownError'
+      }
+      
       reportError(error?.message || 'Role creation failed', 'high')
       
-      // Throw user-friendly error
-      throw new Error(getUserFriendlyError(error))
+      // Provide Brave-specific error message if needed
+      let friendlyError = getUserFriendlyError(error)
+      
+      // Check if this might be a Brave browser issue
+      if (error.message?.includes('timeout') || error.message?.includes('blocked') || error.message?.includes('network')) {
+        friendlyError += '\n\n💡 If you\'re using Brave browser, try:\n• Disable Brave Shields for this site\n• Use a different browser (Chrome, Firefox, Safari)\n• Try again in private/incognito mode'
+      }
+      
+      throw new Error(friendlyError)
+    }
+    }
+    
+    // Set 15-second timeout for Brave compatibility
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Role creation timed out. This might be due to browser blocking. Please try using a different browser or disable privacy shields.'))
+      }, 15000) // 15 seconds
+    })
+    
+    try {
+      return await Promise.race([
+        createRoleWithTimeout(),
+        timeoutPromise
+      ])
+    } catch (error: any) {
+      // If it's a timeout, provide Brave-specific guidance
+      if (error.message?.includes('timed out')) {
+        throw new Error('Role creation timed out. If you\'re using Brave browser, try:\n• Disabling Brave Shields for this site\n• Using Chrome, Firefox, or Safari instead\n• Trying again in private/incognito mode')
+      }
+      throw error
     }
   }
 
